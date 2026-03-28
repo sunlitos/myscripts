@@ -332,8 +332,9 @@
         </div>
         <div class="method-body">
           <p>Modify GBB flags to disable firmware restrictions and enrollment enforcement.</p>
-          <div class="utility-note">⚠️ If prompted for "PP", press power button repeatedly. First run <code>gsctool -a -o</code>, wait for restart, then run:</div>
+          <div class="utility-note">⚠️ If prompted for "PP", press power button repeatedly.</div>
           <div class="utility-code">
+            gsctool -a -o
             gsctool -a -I AllowUnverifiedRo:always<br>
             gsctool -a -w disable<br>
             flashrom --wp-disable<br>
