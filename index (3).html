@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unenrollment Docs</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #050505; --fg: #e8e8e8;
+      --dim: rgba(255,255,255,0.45); --border: rgba(255,255,255,0.15);
+      --green: #4ade80; --yellow: #fbbf24; --red: #f87171; --blue: #60a5fa;
+      --purple: #c084fc;
+    }
+    html { background: var(--bg); }
+    body { min-height: 100vh; background: var(--bg); font-family: 'JetBrains Mono', monospace; color: var(--fg); overflow-x: hidden; }
+
+    .grid {
+      position: fixed; inset: -40px; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: moveGrid 12s linear infinite;
+    }
+    @keyframes moveGrid { to { transform: translate(-40px,-40px); } }
+
+    .credits {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      text-align: center; padding: 14px 0 10px;
+      font-size: 0.68rem; color: var(--dim); letter-spacing: 2px;
+      background: linear-gradient(to bottom, rgba(5,5,5,0.95) 60%, transparent);
+      pointer-events: none;
+    }
+    .credits span { color: rgba(255,255,255,0.65); }
+
+    .page { display: none; position: relative; z-index: 1; min-height: 100vh; flex-direction: column; align-items: center; padding: 72px 16px 64px; }
+    .page.active { display: flex; }
+
+    h1 { font-size: clamp(1.8rem, 8vw, 3.6rem); letter-spacing: 3px; text-align: center; text-shadow: 0 0 28px rgba(255,255,255,0.2); line-height: 1.2; }
+    h2 { font-size: clamp(1.4rem, 6vw, 2.8rem); letter-spacing: 3px; text-align: center; text-shadow: 0 0 22px rgba(255,255,255,0.18); line-height: 1.2; }
+    h3 { font-size: clamp(1rem, 4vw, 1.6rem); letter-spacing: 2px; text-align: center; }
+
+    .line { width: 130px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); margin: 20px auto 28px; flex-shrink: 0; }
+
+    .desc { font-size: clamp(0.73rem, 3.2vw, 0.88rem); color: rgba(255,255,255,0.6); line-height: 1.9; text-align: center; max-width: 520px; width: 100%; }
+
+    .terminal {
+      width: 100%; max-width: 560px; margin-top: 36px;
+      background: rgba(0,0,0,0.65); border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; box-shadow: 0 12px 50px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04);
+      flex-shrink: 0;
+    }
+    .t-bar {
+      background: rgba(255,255,255,0.04); border-bottom: 1px solid var(--border);
+      padding: 10px 14px; display: flex; align-items: center; gap: 7px;
+    }
+    .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+    .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+    .t-label { margin-left: 6px; font-size: 0.67rem; color: var(--dim); letter-spacing: 1px; }
+    .t-body { padding: 16px 16px 20px; font-size: clamp(0.7rem, 2.8vw, 0.83rem); line-height: 1.95; overflow-x: auto; }
+
+    .tl { display: block; min-height: 1.95em; }
+    .tl.cmd::before { content: '$ '; color: var(--green); }
+    .tl.ok   { color: var(--green);  padding-left: 14px; }
+    .tl.warn { color: var(--yellow); padding-left: 14px; }
+    .tl.done { color: var(--green);  padding-left: 14px; font-weight: 700; }
+
+    #p1terminal { opacity: 0; transform: translateY(28px); }
+
+    .btn {
+      margin-top: 40px; padding: 13px 40px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; letter-spacing: 2px;
+      border: 1px solid rgba(255,255,255,0.55); background: transparent; color: white;
+      cursor: pointer; border-radius: 4px;
+      transition: background 0.22s, color 0.22s, box-shadow 0.22s;
+      -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+    }
+    .btn:active, .btn:hover { background: white; color: black; box-shadow: 0 0 22px rgba(255,255,255,0.28); }
+
+    .back-btn {
+      margin-top: 28px; background: transparent; border: none;
+      color: var(--dim); font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; cursor: pointer; letter-spacing: 1px;
+      transition: color 0.2s; padding: 8px 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .back-btn:active, .back-btn:hover { color: white; }
+
+    /* PAGE 2 */
+    .input-terminal {
+      width: 100%; max-width: 560px; margin-top: 36px;
+      background: rgba(0,0,0,0.65); border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; box-shadow: 0 12px 50px rgba(0,0,0,0.7);
+      opacity: 0; transform: translateY(28px); flex-shrink: 0;
+    }
+    .input-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 6px; }
+    .prompt { color: var(--green); font-size: clamp(0.65rem, 2.5vw, 0.8rem); white-space: nowrap; flex-shrink: 0; }
+    .board-input {
+      flex: 1; min-width: 60px; background: transparent; border: none; outline: none;
+      font-family: 'JetBrains Mono', monospace; font-size: clamp(0.7rem, 2.8vw, 0.83rem);
+      color: var(--fg); caret-color: var(--green);
+    }
+    .board-input::placeholder { color: rgba(255,255,255,0.2); }
+    .cursor-blink { display: inline-block; width: 7px; height: 13px; background: var(--green); animation: blink 1s step-end infinite; vertical-align: middle; flex-shrink: 0; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .suggest-row { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; min-height: 22px; }
+    .tag {
+      padding: 3px 10px; border: 1px solid var(--border); border-radius: 3px;
+      font-size: 0.67rem; color: var(--dim); cursor: pointer;
+      transition: border-color 0.18s, color 0.18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tag:active, .tag:hover { border-color: var(--green); color: var(--green); }
+    .tag.selected { border-color: var(--green); color: var(--green); background: rgba(74,222,128,0.08); }
+
+    .result-row { margin-top: 10px; font-size: 0.77rem; min-height: 18px; }
+    .r-found { color: var(--green); } .r-notfound { color: var(--red); } .r-hint { color: var(--dim); font-style: italic; }
+
+    .version-hint {
+      width: 100%; max-width: 560px; margin-top: 14px;
+      background: rgba(96,165,250,0.05); border: 1px solid rgba(96,165,250,0.2);
+      border-radius: 6px; padding: 10px 14px;
+      font-size: clamp(0.65rem, 2.5vw, 0.7rem); color: rgba(96,165,250,0.8); line-height: 1.7;
+      flex-shrink: 0;
+    }
+    .version-hint a { color: var(--blue); text-decoration: none; border-bottom: 1px solid rgba(96,165,250,0.4); }
+    .version-hint a:hover { border-bottom-color: var(--blue); }
+
+    .confirm-btn {
+      margin-top: 28px; padding: 13px 40px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; letter-spacing: 2px;
+      border: 1px solid rgba(255,255,255,0.2); background: transparent;
+      color: rgba(255,255,255,0.25); cursor: not-allowed; border-radius: 4px;
+      transition: all 0.3s ease; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .confirm-btn.ready {
+      border-color: var(--green); color: var(--green);
+      cursor: pointer; box-shadow: 0 0 16px rgba(74,222,128,0.2);
+    }
+    .confirm-btn.ready:active, .confirm-btn.ready:hover {
+      background: var(--green); color: black; box-shadow: 0 0 28px rgba(74,222,128,0.45);
+    }
+
+    .sub-note { font-size: 0.7rem; color: rgba(255,255,255,0.3); text-align: center; font-style: italic; }
+
+    /* PAGE 3 */
+    .device-header { text-align: center; margin-bottom: 6px; }
+    .board-badge {
+      display: inline-block; padding: 4px 14px; border: 1px solid var(--green);
+      border-radius: 3px; font-size: 0.75rem; color: var(--green); letter-spacing: 2px;
+      margin-bottom: 18px; text-transform: uppercase;
+    }
+
+    .info-grid {
+      width: 100%; max-width: 560px; margin-top: 28px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 400px) {
+      .info-grid { grid-template-columns: 1fr; }
+      .info-row2 { grid-template-columns: 1fr !important; }
+    }
+    .info-card {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px 14px;
+    }
+    .info-card .label { font-size: 0.6rem; color: var(--dim); letter-spacing: 1.5px; margin-bottom: 6px; text-transform: uppercase; }
+    .info-card .value { font-size: clamp(0.75rem, 3vw, 0.82rem); color: var(--fg); line-height: 1.4; }
+    .info-card .value.green { color: var(--green); }
+    .info-card .value.yellow { color: var(--yellow); }
+    .info-card .value.red { color: var(--red); }
+    .info-card .value.blue { color: var(--blue); }
+    .info-card .value.purple { color: var(--purple); }
+    .info-card .sub-val { font-size: 0.62rem; color: var(--dim); margin-top: 3px; }
+
+    .kv-badge {
+      display: inline-block; padding: 1px 7px; border-radius: 3px;
+      font-size: 0.65rem; margin-left: 6px; vertical-align: middle;
+    }
+    .kv-green { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+    .kv-yellow { background: rgba(251,191,36,0.1); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+    .kv-red { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+
+    .methods-container { width: 100%; max-width: 560px; margin-top: 20px; flex-shrink: 0; }
+    .methods-title { font-size: 0.68rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 12px; }
+
+    .method-card {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden; margin-bottom: 10px;
+    }
+    .method-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 14px; background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border); cursor: pointer;
+      -webkit-tap-highlight-color: transparent; gap: 8px;
+    }
+    .method-name { font-size: clamp(0.76rem, 3vw, 0.83rem); font-weight: 600; letter-spacing: 1px; flex: 1; min-width: 0; }
+    .method-tag {
+      font-size: 0.58rem; padding: 2px 7px; border-radius: 2px;
+      letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+    }
+    .mt-easy { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+    .mt-med  { background: rgba(251,191,36,0.12); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+    .mt-hard { background: rgba(248,113,113,0.12); color: var(--red);   border: 1px solid rgba(248,113,113,0.3); }
+
+    .method-body { padding: 14px 14px; font-size: clamp(0.7rem, 2.8vw, 0.76rem); line-height: 1.8; color: rgba(255,255,255,0.7); display: none; }
+    .method-body.open { display: block; }
+    .method-body ol { margin-left: 16px; margin-top: 8px; }
+    .method-body li { margin-bottom: 6px; }
+    .method-compat {
+      margin-top: 10px; padding: 8px 12px;
+      background: rgba(96,165,250,0.06); border: 1px solid rgba(96,165,250,0.2);
+      border-radius: 4px; font-size: 0.67rem; color: rgba(96,165,250,0.85); line-height: 1.6;
+    }
+    .method-body .dl-btn {
+      display: inline-block; margin-top: 12px; padding: 8px 18px;
+      border: 1px solid var(--blue); color: var(--blue); border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; letter-spacing: 1px;
+      text-decoration: none; transition: background 0.2s, color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .method-body .dl-btn:active, .method-body .dl-btn:hover { background: var(--blue); color: black; }
+    .chevron { font-size: 0.7rem; transition: transform 0.2s; flex-shrink: 0; }
+    .chevron.open { transform: rotate(180deg); }
+
+    .warning-box {
+      width: 100%; max-width: 560px; margin-top: 14px;
+      background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.3);
+      border-radius: 6px; padding: 12px 14px;
+      font-size: clamp(0.67rem, 2.6vw, 0.72rem); color: var(--yellow); line-height: 1.7; flex-shrink: 0;
+    }
+
+    .subtypes-list {
+      margin-top: 10px; font-size: 0.67rem; color: rgba(255,255,255,0.45);
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .subtype-tag {
+      padding: 2px 8px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 3px;
+    }
+
+    .rec-badge {
+      display: inline-block; margin-left: 8px; padding: 1px 7px;
+      background: rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.5);
+      border-radius: 3px; font-size: 0.55rem; color: var(--green);
+      letter-spacing: 1.5px; vertical-align: middle; font-weight: 700;
+    }
+    .method-recommended {
+      border-color: rgba(74,222,128,0.35);
+      box-shadow: 0 0 12px rgba(74,222,128,0.08);
+    }
+    .method-recommended .method-header {
+      background: rgba(74,222,128,0.04);
+    }
+
+    /* VERSION BOX — compact */
+    .version-box {
+      width: 100%; max-width: 560px; margin-top: 14px;
+      background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 14px;
+      flex-shrink: 0; display: flex; align-items: center; gap: 12px;
+    }
+
+    /* SECTION DIVIDER */
+    .section-divider {
+      width: 100%; max-width: 560px; margin: 22px 0 6px;
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .section-divider .sd-label {
+      font-size: 0.62rem; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; white-space: nowrap;
+    }
+    .section-divider::before, .section-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* UTILITIES SECTION */
+    .util-card {
+      width: 100%; max-width: 560px; background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden; margin-bottom: 10px; flex-shrink: 0;
+    }
+    .util-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 14px; background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border); cursor: pointer;
+      -webkit-tap-highlight-color: transparent; gap: 8px;
+    }
+    .util-title-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    .util-icon { font-size: 0.85rem; flex-shrink: 0; }
+    .util-name { font-size: clamp(0.76rem, 3vw, 0.83rem); font-weight: 600; letter-spacing: 1px; }
+    .util-tag {
+      font-size: 0.58rem; padding: 2px 7px; border-radius: 2px;
+      letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+    }
+    .ut-util { background: rgba(192,132,252,0.12); color: var(--purple); border: 1px solid rgba(192,132,252,0.3); }
+    .ut-guide { background: rgba(96,165,250,0.12); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+    .ut-tool  { background: rgba(251,191,36,0.12); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+
+    .util-body { padding: 14px; font-size: clamp(0.68rem, 2.6vw, 0.75rem); line-height: 1.85; color: rgba(255,255,255,0.7); display: none; }
+    .util-body.open { display: block; }
+    .util-body p { margin-bottom: 10px; }
+    .util-body ol, .util-body ul { margin-left: 16px; margin-top: 8px; margin-bottom: 10px; }
+    .util-body li { margin-bottom: 6px; }
+    .util-body h4 { font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); margin: 14px 0 8px; }
+    .util-body code {
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      padding: 1px 6px; border-radius: 3px; font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em; word-break: break-all;
+    }
+    .util-body .code-block {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+      border-radius: 5px; padding: 10px 12px; margin: 8px 0;
+      font-size: clamp(0.63rem, 2.4vw, 0.71rem); color: var(--green);
+      overflow-x: auto; white-space: pre; font-family: 'JetBrains Mono', monospace; line-height: 1.7;
+    }
+    .util-body .note-box {
+      background: rgba(96,165,250,0.06); border: 1px solid rgba(96,165,250,0.2);
+      border-radius: 4px; padding: 8px 12px; margin: 8px 0;
+      font-size: 0.68rem; color: rgba(96,165,250,0.85); line-height: 1.65;
+    }
+    .util-body .warn-box {
+      background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.25);
+      border-radius: 4px; padding: 8px 12px; margin: 8px 0;
+      font-size: 0.68rem; color: rgba(251,191,36,0.9); line-height: 1.65;
+    }
+    .util-body .success-box {
+      background: rgba(74,222,128,0.05); border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 4px; padding: 8px 12px; margin: 8px 0;
+      font-size: 0.68rem; color: rgba(74,222,128,0.9); line-height: 1.65;
+    }
+    .gbb-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: clamp(0.62rem, 2.3vw, 0.69rem); }
+    .gbb-table th { text-align: left; color: var(--dim); letter-spacing: 1px; border-bottom: 1px solid var(--border); padding: 6px 8px; font-weight: 600; font-size: 0.6rem; text-transform: uppercase; }
+    .gbb-table td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top; line-height: 1.5; }
+    .gbb-table td:first-child { color: var(--green); white-space: nowrap; font-weight: 600; }
+    .gbb-table td:nth-child(2) { color: var(--blue); }
+    .ext-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 14px; border: 1px solid var(--border); border-radius: 3px;
+      font-size: 0.68rem; color: var(--dim); text-decoration: none; letter-spacing: 1px;
+      transition: border-color 0.2s, color 0.2s; margin: 4px 4px 4px 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ext-link:hover { border-color: var(--purple); color: var(--purple); }
+    .ext-link.green-link:hover { border-color: var(--green); color: var(--green); }
+    .ext-link.blue-link:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* DEVICE-SPECIFIC GBB HINT */
+    .device-gbb-hint {
+      padding: 8px 12px; background: rgba(192,132,252,0.06);
+      border: 1px solid rgba(192,132,252,0.2); border-radius: 4px;
+      font-size: 0.68rem; color: rgba(192,132,252,0.9); line-height: 1.65; margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="credits">Crosbreaker · CriticalHD · <span>Exvy</span></div>
+
+  <!-- PAGE 1 -->
+  <div class="page active" id="page1">
+    <h1>Unenrollment<br>Docs</h1>
+    <div class="line"></div>
+    <p class="desc">Unenrollment removes enterprise control from a managed ChromeOS device — restoring full user ownership and disabling enforced policies set by school or workplace admins.</p>
+
+    <div class="terminal" id="p1terminal">
+      <div class="t-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="t-label">chromeos — bash</span>
+      </div>
+      <div class="t-body" id="p1body"></div>
+    </div>
+
+    <p class="desc" style="margin-top:28px; font-size:0.72rem; color:rgba(255,255,255,0.35); font-style:italic;">
+      Covers enrollment mechanics, bypass techniques,<br>board-specific methods &amp; associated risks.
+    </p>
+    <button class="btn" id="continueBtn" onclick="showPage(2)">Continue →</button>
+  </div>
+
+  <!-- PAGE 2 -->
+  <div class="page" id="page2">
+    <h2>Finding Your<br>Chromebook</h2>
+    <div class="line"></div>
+    <p class="desc">Enter your ChromeOS board name below. Find it at <a href="chrome://version" style="color:var(--green);text-decoration:none;border-bottom:1px solid rgba(74,222,128,0.4);" onclick="return false;" title="Open on your Chromebook">chrome://version</a> → look for the word after <code style="color:var(--green)">stable-channel</code> in the Platform line.</p>
+
+    <div class="input-terminal" id="inputTerminal">
+      <div class="t-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="t-label">board-lookup — interactive</span>
+      </div>
+      <div class="t-body">
+        <div class="input-row">
+          <span class="prompt">$ identify_board</span>
+          <input class="board-input" id="boardInput" type="text" placeholder="e.g. octopus, grunt, dedede…" autocomplete="off" spellcheck="false" oninput="onBoardInput()"/>
+          <span class="cursor-blink"></span>
+        </div>
+        <div class="suggest-row" id="suggestions"></div>
+        <div class="result-row" id="boardResult"><span class="r-hint">Type your board name above…</span></div>
+      </div>
+    </div>
+
+    <div class="version-hint">
+      💡 <strong>Can't find your board?</strong> On your Chromebook, open a new tab and go to <a href="chrome://version">chrome://version</a>. Look for the "Platform" line — your board name is the word right after <code>stable-channel</code>. Example: <code>stable-channel-octopus</code> → board is <strong>octopus</strong>.<br>
+      Blocked? Try <a href="chrome://system">chrome://system</a> and search for <code>CHROMEOS_RELEASE_DESCRIPTION</code>.
+    </div>
+
+    <p class="sub-note" style="margin-top:16px;">
+      <span id="boardCount"></span> ChromeOS boards supported
+    </p>
+
+    <button class="confirm-btn" id="confirmBtn" onclick="confirmBoard()">Confirm Board →</button>
+    <button class="back-btn" onclick="showPage(1)">← back</button>
+  </div>
+
+  <!-- PAGE 3 -->
+  <div class="page" id="page3">
+    <div class="device-header">
+      <div class="board-badge" id="p3badge"></div>
+      <h3 id="p3title"></h3>
+    </div>
+    <div class="line"></div>
+
+    <div class="info-grid" id="p3grid"></div>
+    <div id="p3row2"></div>
+    <div id="p3subtypes" class="subtypes-list" style="width:100%;max-width:560px;margin-top:10px;flex-shrink:0;"></div>
+
+    <!-- ChromeOS version now shown in info grid -->
+    <div class="version-box" id="p3versions" style="display:none"></div>
+
+    <!-- Exploits -->
+    <div class="methods-container">
+      <div class="methods-title">▸ Available Unenrollment Methods</div>
+      <div id="methodsList"></div>
+    </div>
+
+    <div class="warning-box">
+      ⚠ These methods modify system-level protections. Only proceed if you own this device or have explicit permission from the owner. Some methods may cause data loss — back up your files first.
+    </div>
+
+    <!-- Utilities & Extras -->
+    <div class="section-divider" style="width:100%;max-width:560px;flex-shrink:0;">
+      <span class="sd-label">Utilities &amp; Extras</span>
+    </div>
+
+    <div id="utilitiesList" style="width:100%;max-width:560px;flex-shrink:0;"></div>
+
+    <button class="back-btn" style="margin-top:28px;" onclick="showPage(2)">← choose different board</button>
+  </div>
+
+<script>
+// ── BOARD DATABASE ──
+const BOARD_DB = {
+  // ── ARM / Qualcomm Trogdor ──
+  trogdor:     {label:"Trogdor",     platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:["lazor","limozeen","pompom","wormdingler","coachz","mrbossian","quackingstick"], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  lazor:       {label:"Lazor",       platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  limozeen:    {label:"Limozeen",    platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  pompom:      {label:"Pompom",      platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  wormdingler: {label:"Wormdingler", platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  coachz:      {label:"Coachz",      platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  mrbossian:   {label:"Mr. Bossian", platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  quackingstick:{label:"Quackingstick",platform:"Qualcomm SC7180",arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  puff:        {label:"Puff",        platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:["dragonair"], methods:["sh1mmer","badrecovery","quicksilver"]},
+  dragonair:   {label:"Dragonair",   platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  strongbad:   {label:"Strongbad",   platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:["kingoftown","homestar"], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  kingoftown:  {label:"King of Town",platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  homestar:    {label:"Homestar",    platform:"Qualcomm SC7180",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  // ── MTK / ARM Asurada/Cherry ──
+  asurada:  {label:"Asurada",  platform:"MediaTek MT8192",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:["hayato"], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  cherry:   {label:"Cherry",   platform:"MediaTek MT8195",  arch:"ARM64", ec:"Cr50", kv:"5–7", subtypes:["tomato","myst","damu"], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","badbr0ker","quicksilver"]},
+  corsola:  {label:"Corsola",  platform:"MediaTek MT8186",  arch:"ARM64", ec:"Ti50", kv:"5–7", subtypes:["magneton","dojo"], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","quicksilver"]},
+  hayato:   {label:"Hayato",   platform:"MediaTek MT8192",  arch:"ARM64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  dojo:     {label:"Dojo",     platform:"MediaTek MT8186",  arch:"ARM64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["sh1ttyoobe","sh1ttyexec","baddieapple","quicksilver"]},
+  tomato:   {label:"Tomato",   platform:"MediaTek MT8195",  arch:"ARM64", ec:"Cr50", kv:"5–6", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","badbr0ker","quicksilver"]},
+  magneton: {label:"Magneton", platform:"MediaTek MT8186",  arch:"ARM64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["sh1ttyoobe","sh1ttyexec","baddieapple","quicksilver"]},
+  damu:     {label:"Damu",     platform:"MediaTek MT8195",  arch:"ARM64", ec:"Cr50", kv:"5–6", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","quicksilver"]},
+  myst:     {label:"Myst",     platform:"MediaTek MT8195",  arch:"ARM64", ec:"Cr50", kv:"5–6", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","badbr0ker","quicksilver"]},
+  // ── Intel Hatch (gen10) ──
+  hatch:    {label:"Hatch",    platform:"Intel Ice Lake",   arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:["kohaku","helios","jinlon","dratini"], methods:["sh1mmer","badrecovery","quicksilver"]},
+  kohaku:   {label:"Kohaku",   platform:"Intel Ice Lake",   arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  helios:   {label:"Helios",   platform:"Intel Ice Lake",   arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  jinlon:   {label:"Jinlon",   platform:"Intel Ice Lake",   arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  morphius: {label:"Morphius", platform:"AMD Ryzen (Dali)", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  dratini:  {label:"Dratini",  platform:"Intel Ice Lake",   arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  // ── Intel Volteer (gen11/12 Tiger Lake) ──
+  volteer:  {label:"Volteer",  platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:["voxel","voema","volta","volet","vorlage","syndra","sarien","vayne","palkia","fleex","drallion","arcada","akemi","wahoo"], methods:["sh1mmer","badrecovery","quicksilver"]},
+  voxel:    {label:"Voxel",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  voema:    {label:"Voema",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  volta:    {label:"Volta",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  volet:    {label:"Volet",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  vorlage:  {label:"Vorlage",  platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  syndra:   {label:"Syndra",   platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  sarien:   {label:"Sarien",   platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  vayne:    {label:"Vayne",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  palkia:   {label:"Palkia",   platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  fleex:    {label:"Fleex",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  drallion: {label:"Drallion", platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  arcada:   {label:"Arcada",   platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  akemi:    {label:"Akemi",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  wahoo:    {label:"Wahoo",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  // ── Intel Skywalker (Raptor Lake) ──
+  skywalker:{label:"Skywalker", platform:"Intel Raptor Lake", arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:["anakin","anakin360","baze","jye","obiwan","quigon"], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  anakin:   {label:"Anakin",    platform:"Intel Raptor Lake", arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  anakin360:{label:"Anakin360", platform:"Intel Raptor Lake", arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  baze:     {label:"Baze",      platform:"Intel Raptor Lake", arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  jye:      {label:"Jye",       platform:"Intel Raptor Lake", arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  obiwan:   {label:"Obiwan",    platform:"Intel Raptor Lake", arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  // ── AMD Rauru (Mendocino / Phoenix 2) ──
+  rauru:    {label:"Rauru",     platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:["hylia","navi"], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  hylia:    {label:"Hylia",     platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  navi:     {label:"Navi",      platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  // ── Intel Brask (Alder Lake — Chromebox family) ──
+  brask:    {label:"Brask",     platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:["aurash","bujia","gladios","kinox","kuldax","lisbon","moli","moxie"], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  aurash:   {label:"Aurash",    platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  bujia:    {label:"Bujia",     platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  gladios:  {label:"Gladios",   platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  kinox:    {label:"Kinox",     platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  kuldax:   {label:"Kuldax",    platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  lisbon:   {label:"Lisbon",    platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  moli:     {label:"Moli",      platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  moxie:    {label:"Moxie",     platform:"Intel Alder Lake",  arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  // ── Intel Brox (Alder Lake N — newer Chromebox) ──
+  brox:     {label:"Brox",      platform:"Intel Alder Lake N",arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:["caboc","jubilant","jubileum","lotso"], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  caboc:    {label:"Caboc",     platform:"Intel Alder Lake N",arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  jubilant: {label:"Jubilant",  platform:"Intel Alder Lake N",arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  jubileum: {label:"Jubileum",  platform:"Intel Alder Lake N",arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  lotso:    {label:"Lotso",     platform:"Intel Alder Lake N",arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  // ── AMD Ovis (Ryzen 7000) ──
+  ovis:     {label:"Ovis",      platform:"AMD Ryzen 7000",    arch:"x86_64", ec:"Ti50", kv:"7",   subtypes:["deku"], methods:["baddieapple","pencil","quicksilver"]},
+  deku:     {label:"Deku",      platform:"AMD Ryzen 7000",    arch:"x86_64", ec:"Ti50", kv:"7",   subtypes:[], methods:["baddieapple","pencil","quicksilver"]},
+  // ── Intel Sarien (separate Tiger Lake family) ──
+  sarien:   {label:"Sarien",    platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:["arcada"], methods:["sh1mmer","badrecovery","quicksilver"]},
+  // ── Intel Drallion (Tiger Lake) ──
+  drallion: {label:"Drallion",  platform:"Intel Tiger Lake",  arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  // ── Intel Jacuzzi (Jasper Lake — many subtypes) ──
+  jacuzzi:  {label:"Jacuzzi",   platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:["burnet","cozmo","damu","esche","fennel","fennel14","juniper","kappa","kenzo","makomo","pico"], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  cozmo:    {label:"Cozmo",     platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  esche:    {label:"Esche",     platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  fennel14: {label:"Fennel14",  platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  juniper:  {label:"Juniper",   platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  kenzo:    {label:"Kenzo",     platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  makomo:   {label:"Makomo",    platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  pico:     {label:"Pico",      platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  // ── Nirva (Nissa variant — Intel Alder Lake N) ──
+  nirva:    {label:"Nirva",     platform:"Intel Alder Lake N",arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:["craaskyu2"], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  craaskyu2:{label:"Craaskyu2", platform:"Intel Alder Lake N",arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  brya:     {label:"Brya",     platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:["felwinter","primus","taeko","craask","crota","brask","lismore","dirinboz","berknip"], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  felwinter:{label:"Felwinter", platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  primus:   {label:"Primus",   platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  taeko:    {label:"Taeko",    platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  craask:   {label:"Craask",   platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  crota:    {label:"Crota",    platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  nissa:    {label:"Nissa",    platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:["pujjo","pujjo1e","pujjocento","pujjoga","pujjogatwin","pujjolo","pujjoniru","pujjoquince","pujjoteen","pujjoteenlo"], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  brask:    {label:"Brask",    platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  lismore:  {label:"Lismore",  platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  dirinboz: {label:"Dirinboz", platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  berknip:  {label:"Berknip",  platform:"Intel Alder Lake",   arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  // ── Nissa subtypes (pujjo family) ──
+  pujjo:       {label:"Pujjo",       platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjo1e:     {label:"Pujjo1e",     platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjocento:  {label:"Pujjocento",  platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjoga:     {label:"Pujjoga",     platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjogatwin: {label:"Pujjogatwin", platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjolo:     {label:"Pujjolo",     platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjoniru:   {label:"Pujjoniru",   platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjoquince: {label:"Pujjoquince", platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjoteen:   {label:"Pujjoteen",   platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  pujjoteenlo: {label:"Pujjoteenlo", platform:"Intel Alder Lake N", arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  // ── AMD Guybrush / Skyrim ──
+  guybrush: {label:"Guybrush", platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:["vilboz","nipperkin","jelboz","jelboz64","kasumi360"], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  skyrim:   {label:"Skyrim",   platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  vilboz:   {label:"Vilboz",   platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  nipperkin:{label:"Nipperkin",platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  jelboz:   {label:"Jelboz",   platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  jelboz64: {label:"Jelboz64", platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  kasumi360:{label:"Kasumi360",platform:"AMD Mendocino",     arch:"x86_64", ec:"Ti50", kv:"5–7", subtypes:[], methods:["baddieapple","sh1ttyoobe","sh1ttyexec","pencil","quicksilver"]},
+  // ── AMD Rex / Geralt ──
+  rex:      {label:"Rex",      platform:"AMD Phoenix",       arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:["staryu"], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  geralt:   {label:"Geralt",   platform:"AMD Phoenix",       arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  staryu:   {label:"Staryu",   platform:"AMD Phoenix",       arch:"x86_64", ec:"Ti50", kv:"6–7", subtypes:[], methods:["baddieapple","sh1ttyexec","pencil","quicksilver"]},
+  // ── Intel Dedede (Jasper Lake) ──
+  dedede:   {label:"Dedede",   platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:["metaknight","waddledoo","shredder","lillipup","nightfury","steelix","tentacruel","walrein","madoo","tiger","zako"], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  metaknight:{label:"Metaknight",platform:"Intel Jasper Lake",arch:"x86_64",ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  waddledoo:{label:"Waddledoo",platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  shredder: {label:"Shredder", platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  lillipup: {label:"Lillipup", platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  nightfury:{label:"Nightfury",platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  steelix:  {label:"Steelix",  platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  tentacruel:{label:"Tentacruel",platform:"Intel Jasper Lake",arch:"x86_64",ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  walrein:  {label:"Walrein",  platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  madoo:    {label:"Madoo",    platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  tiger:    {label:"Tiger",    platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  zako:     {label:"Zako",     platform:"Intel Jasper Lake", arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","badbr0ker","quicksilver"]},
+  // ── Intel Octopus (Gemini Lake) ──
+  octopus:  {label:"Octopus",  platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:["blooglet","bobba","dood","foob","garg","lick","meowth","mimrock","moonrock","nasher","orbatrix","phaser360","sparky","sparky360","ampton"], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  blooglet: {label:"Blooglet", platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  bobba:    {label:"Bobba",    platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  dood:     {label:"Dood",     platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  foob:     {label:"Foob",     platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  garg:     {label:"Garg",     platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  lick:     {label:"Lick",     platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  meowth:   {label:"Meowth",   platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  mimrock:  {label:"Mimrock",  platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  moonrock: {label:"Moonrock", platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  nasher:   {label:"Nasher",   platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  orbatrix: {label:"Orbatrix", platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  phaser360:{label:"Phaser360",platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  sparky:   {label:"Sparky",   platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  sparky360:{label:"Sparky360",platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  ampton:   {label:"Ampton",   platform:"Intel Gemini Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  // ── AMD Grunt ──
+  grunt:    {label:"Grunt",    platform:"AMD Stoney Ridge",  arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:["barla","careena","kasumi","treeya","nuwani"], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  barla:    {label:"Barla",    platform:"AMD Stoney Ridge",  arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  careena:  {label:"Careena",  platform:"AMD Stoney Ridge",  arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  kasumi:   {label:"Kasumi",   platform:"AMD Stoney Ridge",  arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  treeya:   {label:"Treeya",   platform:"AMD Stoney Ridge",  arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  nuwani:   {label:"Nuwani",   platform:"AMD Stoney Ridge",  arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  // ── Intel Coral (Apollo Lake) ──
+  coral:    {label:"Coral",    platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:["astronaut","babymega","babytiger","blacktip","bruce","casta","epaulette","guard","laser","lava","rabbid","robo360","santa","serpent","whitetip","reks","jacuzzi","jonquil","kindred","kingler","phaser","quillback","starfish"], methods:["sh1mmer","badrecovery","br1ck","legacy","quicksilver"]},
+  astronaut:{label:"Astronaut",platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  babymega: {label:"Babymega", platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  babytiger:{label:"Babytiger",platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  blacktip: {label:"Blacktip", platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  bruce:    {label:"Bruce",    platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  casta:    {label:"Casta",    platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  epaulette:{label:"Epaulette",platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  guard:    {label:"Guard",    platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  laser:    {label:"Laser",    platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  lava:     {label:"Lava",     platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  nasher360:{label:"Nasher360",platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  rabbid:   {label:"Rabbid",   platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  robo360:  {label:"Robo360",  platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  santa:    {label:"Santa",    platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  serpent:  {label:"Serpent",  platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  whitetip: {label:"Whitetip", platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  reks:     {label:"Reks",     platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  jacuzzi:  {label:"Jacuzzi",  platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  jonquil:  {label:"Jonquil",  platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  kindred:  {label:"Kindred",  platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  kingler:  {label:"Kingler",  platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  phaser:   {label:"Phaser",   platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  quillback:{label:"Quillback",platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  starfish: {label:"Starfish", platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  reef:     {label:"Reef",     platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:["sand","snappy","pyro","electro"], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  sand:     {label:"Sand",     platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  snappy:   {label:"Snappy",   platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  pyro:     {label:"Pyro",     platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  electro:  {label:"Electro",  platform:"Intel Apollo Lake", arch:"x86_64", ec:"Cr50", kv:"1–6", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  // ── Intel Eve / Nocturne / Nami / Atlas ──
+  eve:      {label:"Eve",      platform:"Intel Kaby Lake Y", arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  nocturne: {label:"Nocturne", platform:"Intel Kaby Lake",   arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  atlas:    {label:"Atlas",    platform:"Intel Whiskey Lake", arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  rammus:   {label:"Rammus",   platform:"Intel Comet Lake",  arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  shyvana:  {label:"Shyvana",  platform:"Intel Kaby Lake",   arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  nami:     {label:"Nami",     platform:"Intel Kaby Lake U", arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:["akali","bard","ekko","sona","pantheon"], methods:["sh1mmer","badrecovery","quicksilver"]},
+  akali:    {label:"Akali",    platform:"Intel Kaby Lake U", arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  bard:     {label:"Bard",     platform:"Intel Kaby Lake U", arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  ekko:     {label:"Ekko",     platform:"Intel Kaby Lake U", arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  sona:     {label:"Sona",     platform:"Intel Kaby Lake U", arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  pantheon: {label:"Pantheon", platform:"Intel Kaby Lake U", arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  fizz:     {label:"Fizz",     platform:"Intel Kaby Lake",   arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  ultima:   {label:"Ultima",   platform:"Intel Kaby Lake",   arch:"x86_64", ec:"Cr50", kv:"2–5", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  // ── Intel Kukui / Hana (MediaTek) — EOL ──
+  kukui:    {label:"Kukui",    platform:"MediaTek MT8173",   arch:"ARM64", ec:"Cr50", kv:"1–2", subtypes:["hana","kodama","kakadu","kappa","fennel","flapjack","krane"], methods:["sh1mmer","badrecovery","legacy"]},
+  hana:     {label:"Hana",     platform:"MediaTek MT8173",   arch:"ARM64", ec:"Cr50", kv:"1–2", subtypes:[], methods:["sh1mmer","badrecovery","legacy"]},
+  kodama:   {label:"Kodama",   platform:"MediaTek MT8183",   arch:"ARM64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery"]},
+  kakadu:   {label:"Kakadu",   platform:"MediaTek MT8183",   arch:"ARM64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery"]},
+  kappa:    {label:"Kappa",    platform:"MediaTek MT8183",   arch:"ARM64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery"]},
+  fennel:   {label:"Fennel",   platform:"MediaTek MT8183",   arch:"ARM64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery"]},
+  flapjack: {label:"Flapjack", platform:"MediaTek MT8183",   arch:"ARM64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery"]},
+  krane:    {label:"Krane",    platform:"MediaTek MT8183",   arch:"ARM64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery"]},
+  // ── AMD Zork / Cezanne ──
+  zork:     {label:"Zork",     platform:"AMD Picasso / Dali", arch:"x86_64", ec:"Cr50", kv:"2–6", subtypes:["dalboz","dirinboz2","ezkinil","gooey","woomax","zorro"], methods:["sh1mmer","badrecovery","quicksilver"]},
+  dalboz:   {label:"Dalboz",   platform:"AMD Picasso / Dali", arch:"x86_64", ec:"Cr50", kv:"2–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  dirinboz2:{label:"Dirinboz2",platform:"AMD Cezanne",        arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  ezkinil:  {label:"Ezkinil",  platform:"AMD Cezanne",        arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  gooey:    {label:"Gooey",    platform:"AMD Cezanne",        arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  woomax:   {label:"Woomax",   platform:"AMD Cezanne",        arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  zorro:    {label:"Zorro",    platform:"AMD Cezanne",        arch:"x86_64", ec:"Cr50", kv:"3–6", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  // ── Skylake family — EOL ──
+  caroline: {label:"Caroline", platform:"Intel Skylake",     arch:"x86_64", ec:"Cr50", kv:"2–3", subtypes:["cave","chell","burnet"], methods:["sh1mmer","badrecovery","quicksilver"]},
+  cave:     {label:"Cave",     platform:"Intel Skylake",     arch:"x86_64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  chell:    {label:"Chell",    platform:"Intel Skylake",     arch:"x86_64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  burnet:   {label:"Burnet",   platform:"Intel Skylake",     arch:"x86_64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","badrecovery","quicksilver"]},
+  // ── RK3399 — EOL ──
+  bob:      {label:"Bob",      platform:"RK3399",            arch:"ARM64",  ec:"Cr50", kv:"1–2", subtypes:["kevin","scarlet"], methods:["sh1mmer","badrecovery"]},
+  kevin:    {label:"Kevin",    platform:"RK3399",            arch:"ARM64",  ec:"Cr50", kv:"1–2", subtypes:[], methods:["sh1mmer","badrecovery"]},
+  scarlet:  {label:"Scarlet",  platform:"RK3399",            arch:"ARM64",  ec:"Cr50", kv:"1–2", subtypes:[], methods:["sh1mmer","legacy"]},
+  // ── Older / H1 / legacy boards ──
+  samus:    {label:"Samus",    platform:"Intel Broadwell",   arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  veyron:   {label:"Veyron",   platform:"RK3288",            arch:"ARM",    ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  cyan:     {label:"Cyan",     platform:"Intel Braswell",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  elm:      {label:"Elm",      platform:"MediaTek MT8173",   arch:"ARM64",  ec:"H1",   kv:"1",   subtypes:["oak"], methods:["sh1mmer","legacy"]},
+  oak:      {label:"Oak",      platform:"MediaTek MT8173",   arch:"ARM64",  ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  clapper:  {label:"Clapper",  platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:["glimmer","gnawty","enguarde","kip","winky","banjo","candy","orco","relm","swanky"], methods:["sh1mmer","legacy"]},
+  glimmer:  {label:"Glimmer",  platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  gnawty:   {label:"Gnawty",   platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  enguarde: {label:"Enguarde", platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  kip:      {label:"Kip",      platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  winky:    {label:"Winky",    platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  banjo:    {label:"Banjo",    platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  candy:    {label:"Candy",    platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  orco:     {label:"Orco",     platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  relm:     {label:"Relm",     platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  swanky:   {label:"Swanky",   platform:"Intel Baytrail",    arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  auron:    {label:"Auron",    platform:"Intel Broadwell",   arch:"x86_64", ec:"H1",   kv:"1",   subtypes:["tidus","paine","yuna","gandof","lulu","lars"], methods:["sh1mmer","legacy"]},
+  tidus:    {label:"Tidus",    platform:"Intel Broadwell",   arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  paine:    {label:"Paine",    platform:"Intel Broadwell",   arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  yuna:     {label:"Yuna",     platform:"Intel Broadwell",   arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  gandof:   {label:"Gandof",   platform:"Intel Broadwell",   arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  lulu:     {label:"Lulu",     platform:"Intel Broadwell",   arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  lars:     {label:"Lars",     platform:"Intel Broadwell",   arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["sh1mmer","legacy"]},
+  falco:    {label:"Falco",    platform:"Intel Haswell",     arch:"x86_64", ec:"H1",   kv:"1",   subtypes:["peppy","leon","wolf","mccloud","panther"], methods:["legacy"]},
+  peppy:    {label:"Peppy",    platform:"Intel Haswell",     arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  leon:     {label:"Leon",     platform:"Intel Haswell",     arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  wolf:     {label:"Wolf",     platform:"Intel Haswell",     arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  mccloud:  {label:"Mccloud",  platform:"Intel Haswell",     arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  panther:  {label:"Panther",  platform:"Intel Haswell",     arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  daisy:    {label:"Daisy",    platform:"Samsung Exynos 5250",arch:"ARM",   ec:"H1",   kv:"1",   subtypes:["snow","spring","peach","pit","pi"], methods:["legacy"]},
+  snow:     {label:"Snow",     platform:"Samsung Exynos 5250",arch:"ARM",   ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  peach:    {label:"Peach",    platform:"Samsung Exynos 5800",arch:"ARM",   ec:"H1",   kv:"1",   subtypes:["pit","pi"], methods:["legacy"]},
+  pit:      {label:"Pit",      platform:"Samsung Exynos 5800",arch:"ARM",   ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  pi:       {label:"Pi",       platform:"Samsung Exynos 5800",arch:"ARM",   ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  nyan:     {label:"Nyan",     platform:"NVIDIA Tegra K1",   arch:"ARM",    ec:"H1",   kv:"1",   subtypes:["nyan_big","nyan_blaze"], methods:["legacy"]},
+  nyan_big: {label:"Nyan Big", platform:"NVIDIA Tegra K1",   arch:"ARM",    ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  nyan_blaze:{label:"Nyan Blaze",platform:"NVIDIA Tegra K1", arch:"ARM",    ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  zorba:    {label:"Zorba",    platform:"AMD Stoney Ridge",  arch:"x86_64", ec:"Cr50", kv:"1–5", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  banon:    {label:"Banon",    platform:"AMD Stoney Ridge",  arch:"x86_64", ec:"Cr50", kv:"1–5", subtypes:[], methods:["sh1mmer","badrecovery","legacy","quicksilver"]},
+  edgar:    {label:"Edgar",    platform:"Intel Skylake",     arch:"x86_64", ec:"Cr50", kv:"2–3", subtypes:[], methods:["sh1mmer","legacy"]},
+  stout:    {label:"Stout",    platform:"Intel Ivy Bridge",  arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  sumo:     {label:"Sumo",     platform:"Intel Sandy Bridge",arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  mario:    {label:"Mario",    platform:"Intel Sandy Bridge",arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+  stumpy:   {label:"Stumpy",   platform:"Intel Sandy Bridge",arch:"x86_64", ec:"H1",   kv:"1",   subtypes:[], methods:["legacy"]},
+};
+
+// ── Exploit compatibility by kernver ──
+// kv is the tpm_kernver last digit — it increments with ChromeOS version milestones:
+//   kv1 = ≤ R110  |  kv2 = R111–R119  |  kv3 = R120–R124
+//   kv4 = R125–R131  |  kv5 = R132–R137  |  kv6 = R138–R142  |  kv7 = R143+
+// Note: kernskip is common — a device may be on a newer ChromeOS but still show a lower kv.
+// The kv value in the board DB is the RANGE possible from factory to current latest.
+const KV_VERSION_MAP = {
+  "1":   {note:"kv1 only. This board stays on kv1 regardless of ChromeOS version (H1/legacy EC, no GSC keyroll). SH1MMER and BadRecovery work freely. No FWMP enforcement on most of these boards."},
+  "1–2": {note:"kv1–2. Early Cr50 board. kv1 on R110 and below, kv2 on R111–R119. SH1MMER works on kv1 and kv2. BadRecovery works on kv3 and below — downgrade to ≤R124 to hit kv3."},
+  "1–3": {note:"kv1–3. Cr50 board currently on kv1–3 depending on installed version. kv1 = ≤R110, kv2 = R111–R119, kv3 = R120–R124. SH1MMER, BadRecovery, and BR1CK (if eligible) all work. Quicksilver via SH1MMER for R125–R131 (kv4 on current builds)."},
+  "2–3": {note:"kv2–3. Cr50 board. kv2 on R111–R119, kv3 on R120–R124. SH1MMER works. BadRecovery works on kv3 and below. Quicksilver via SH1MMER for newer builds (R125+ = kv4 on this board)."},
+  "2–4": {note:"kv2–4. Cr50 board. kv2 = R111–R119, kv3 = R120–R124, kv4 = R125–R131. SH1MMER and BadRecovery work on kv3 and below. If currently on kv4 (R125+), use BadBr0ker + Sh1ttyExec, or Quicksilver."},
+  "3":   {note:"kv3 only. Cr50 board, stays at kv3. SH1MMER works. BadRecovery works. Quicksilver for R125+ builds."},
+  "3–4": {note:"kv3–4. Cr50 board. kv3 = R120–R124, kv4 = R125–R131. SH1MMER and BadRecovery work on kv3 (≤R124). If on kv4 (R125+): use Sh1ttyExec + Quicksilver, or BadBr0ker. Downgrade to ≤R124 for SH1MMER/BadRecovery."},
+  "4":   {note:"kv4 only. Keyrolled Cr50. SH1MMER will NOT boot. Downgrade to ≤R124 not possible (firmware rollback check). Use Sh1ttyExec + Quicksilver, or BadBr0ker."},
+  "5":   {note:"kv5 only. Keyrolled Cr50/early Ti50. SH1MMER cannot boot. kv5 = R132–R137. Sh1ttyOOBE for R133–R137, Sh1ttyExec for R138–R142 (if device reaches kv6). br0ker works on kv5 only (≤R132). Baddieapple + Quicksilver covers R125–R142."},
+  "5–6": {note:"kv5–6. Ti50 or keyrolled Cr50. kv5 = R132–R137, kv6 = R138–R142. SH1MMER cannot boot either. Sh1ttyOOBE on R133–R137 (kv5), Sh1ttyExec on R138–R143 (kv6). br0ker only on kv5 (≤R132). Baddieapple + Quicksilver covers kv5 and kv6."},
+  "6":   {note:"kv6 only. Ti50, kv6 = R138–R142. SH1MMER and br0ker do NOT work. Use Sh1ttyExec + Quicksilver, or Baddieapple + Quicksilver. Pencil WP bypass also available."},
+  "1–5": {note:"kv1–5. Cr50 board still receiving updates. Currently on kv1–5 depending on installed ChromeOS. kv1=≤R110, kv2=R111–R119, kv3=R120–R124, kv4=R125–R131, kv5=R132–R137. SH1MMER works freely on kv1–3. If currently kv4+, use Sh1ttyExec + Quicksilver or downgrade."},
+  "1–6": {note:"kv1–6. Active Cr50 board receiving all updates. Check your actual kv in recovery (Tab key). kv1–3 (≤R124): SH1MMER and BadRecovery work freely. kv4 (R125–R131): Sh1ttyExec + Quicksilver. kv5 (R132–R137): Sh1ttyOOBE or Baddieapple. kv6 (R138–R142): Sh1ttyExec + Quicksilver or Baddieapple."},
+  "2–5": {note:"kv2–5. Active Cr50 board. kv2=R111–R119, kv3=R120–R124, kv4=R125–R131, kv5=R132–R137. SH1MMER and BadRecovery work on kv2/kv3. If currently kv4+, use Sh1ttyExec + Quicksilver or downgrade to ≤R124."},
+  "2–6": {note:"kv2–6. Active Cr50 board (AMD Zork/Cezanne family). Check your actual kv. kv2/kv3 (≤R124): SH1MMER and BadRecovery. kv4 (R125–R131): Sh1ttyExec + Quicksilver. kv5/kv6 (R132–R142): Baddieapple + Quicksilver or Sh1ttyOOBE/Sh1ttyExec."},
+  "3–6": {note:"kv3–6. Active Cr50 board (Volteer/Hatch/Dedede/Trogdor etc). Check your actual kv. kv3 (≤R124): SH1MMER and BadRecovery work. kv4 (R125–R131): Sh1ttyExec + Quicksilver. kv5 (R132–R137): Sh1ttyOOBE or Baddieapple. kv6 (R138–R142): Sh1ttyExec + Quicksilver."},
+  "5–7": {note:"kv5–7. Ti50 / keyrolled board on the latest ChromeOS. kv5=R132–R137, kv6=R138–R142, kv7=R143+. Sh1ttyOOBE for kv5 (R133–R137). Sh1ttyExec for kv6 (R138–R142). kv7: no consistent public exploit yet. Baddieapple + Quicksilver works up to kv6 (≤R142)."},
+  "6–7": {note:"kv6–7. Ti50, newest boards. kv6=R138–R142, kv7=R143+. Sh1ttyExec works on kv6 (R138–R142). Baddieapple + Quicksilver also covers kv6. kv7 (R143+): no consistent public exploit yet."},
+  "7":   {note:"kv7. Ti50, R143+. No known consistent public exploit for kv7. Sh1ttyExec patched in R143. Wait for new methods from the community."},
+};
+
+const BOARD_NAMES = Object.keys(BOARD_DB).sort();
+document.getElementById('boardCount').textContent = BOARD_NAMES.length + '+';
+
+// ── METHOD DEFINITIONS ──
+const METHODS = {
+  sh1mmer: {
+    name: "SH1MMER", difficulty: "easy", tag: "mt-easy",
+    desc: "Boot a modified RMA shim image to deprovision the device. Found by the Mercury Workshop team (Jan 2023). Works on unkeyrolled Cr50 boards.",
+    compat: "✓ Unkeyrolled Cr50 boards · ChromeOS ≤ R111 natively; use E-HALCYON or Quicksilver payload for newer versions",
+    steps: [
+      "Find a SH1MMER prebuilt for your board at <a href='https://dl.crosbreaker.dev' target='_blank' style='color:var(--blue)'>dl.crosbreaker.dev</a>",
+      "Flash the .bin to a USB drive using Chromebook Recovery Utility → Settings → <b>Use local image</b>",
+      "Enter recovery mode: hold <b>Esc + Refresh</b>, then press Power",
+      "Plug in the USB. SH1MMER will boot automatically",
+      "Navigate the SH1MMER menu → select <b>Un-Enroll</b> (or open Payloads → Quicksilver for v125+)",
+      "Reboot — your Chromebook is now unenrolled. Add your personal Google account first, then school if needed"
+    ],
+    dlUrl: true
+  },
+  badrecovery: {
+    name: "BadRecovery", difficulty: "easy", tag: "mt-easy",
+    desc: "Modified recovery image that gets arbitrary code execution via a vulnerability in ChromeOS recovery scripts. Best for v124 and below, or any EOL device.",
+    compat: "✓ Cr50 boards · kernver 3 or lower · All EOL devices before 2024 · Best on ChromeOS ≤ v124",
+    steps: [
+      "Download the BadRecovery image for your board from <a href='https://dl.crosbreaker.dev' target='_blank' style='color:var(--blue)'>dl.crosbreaker.dev</a> or <a href='https://github.com/CoolElectronics/badrecovery' target='_blank' style='color:var(--blue)'>github.com/CoolElectronics/badrecovery</a>",
+      "Flash to USB using Chromebook Recovery Utility or <code>dd</code> on Linux",
+      "Enter recovery mode: <b>Esc + Refresh + Power</b>",
+      "Plug in USB — it boots into BadRecovery's custom shell automatically",
+      "Press <b>Esc + Refresh + Power</b> again to enter developer mode, then <b>Ctrl+D</b>",
+      "Press <b>Ctrl+D</b> on each warning screen to confirm. Reboot into ChromeOS",
+      "Complete setup with your personal Google account"
+    ],
+    dlUrl: true
+  },
+  badbr0ker: {
+    name: "Badbr0ker", difficulty: "medium", tag: "mt-med",
+    desc: "Br0ker injected into BadRecovery unverified — allows full FWMP removal on kv4–kv5 keyrolled devices where SH1MMER can't boot. Needs sh1ttyOOBE or sh1ttyExec first to exit managed OOBE.",
+    compat: "✓ Cr50 keyrolled boards · kernver 4–5 · ChromeOS ≤ R133 for br0ker unenroll",
+    steps: [
+      "Complete <b>Sh1ttyOOBE</b> or <b>Sh1ttyExec</b> first to escape the managed OOBE loop",
+      "Enable developer mode (<b>Esc + Refresh + Power</b>, then <b>Ctrl+D</b>), then enter recovery mode again",
+      "Download Badbr0ker prebuilt for your board from <a href='https://dl.crosbreaker.dev' target='_blank' style='color:var(--blue)'>dl.crosbreaker.dev</a>",
+      "Flash to USB, boot the USB in recovery mode",
+      "In the shell, connect to WiFi, then run:<br><code>curl -LO https://ba.crosbreaker.dev/br0ker.sh && sh br0ker.sh</code>",
+      "Wait for completion — device reboots unenrolled. Note: does NOT work on kv6"
+    ],
+    dlUrl: true
+  },
+  baddieapple: {
+    name: "Baddieapple", difficulty: "medium", tag: "mt-med",
+    desc: "A custom recovery image for keyrolled kv5/kv6 boards. You recover to it, then enter miniOS VT3 shell to run commands. From there: Quicksilver (unenroll ≤ R143), br0ker (kv5 only, ≤ R133), downgrade to any version, unkeyroll (if WP already off), or Daub.",
+    compat: "✓ kv5/kv6 boards: nissa, skyrim, guybrush, corsola, brya, rex, cherry, geralt, staryu · ChromeOS R125–R143",
+    steps: [
+      "Build or download Baddieapple for your board from <a href='https://dl.crosbreaker.dev/ChromeOS/modified-recovery/baddieapple' style='color:var(--blue)' target='_blank'>github.com/crosbreaker/baddieapple</a>",
+      "Flash to USB using Chromebook Recovery Utility, balenaEtcher, Rufus, or <code>dd</code>",
+      "Enter recovery mode (<b>Esc + Refresh + Power</b>) and boot the USB",
+      "ChromeOS will recover to the Baddieapple image. Once done, go through setup until WiFi screen",
+      "Open the miniOS VT3 shell: press <b>Ctrl+Alt+F3</b> (if black screen, try <b>Ctrl+Alt+F2</b>)",
+      "Connect to WiFi. For unenrollment (≤ R143), run:<br><code>vpd -i RW_VPD -s re_enrollment_key=\"$(openssl rand -hex 32)\"</code>",
+      "Alternatively, run the Quicksilver payload or recovery selector from <a href='https://crosbreaker.dev' target='_blank' style='color:var(--blue)'>crosbreaker.dev</a>"
+    ],
+    dlUrl: false
+  },
+  quicksilver: {
+    name: "Quicksilver", difficulty: "easy", tag: "mt-easy",
+    desc: "Exploit found by emerwyi that overwrites the VPD re-enrollment key, preventing re-enrollment on boot. Works on v125–v143 (kv4–kv6). Run it as a SH1MMER payload (unkeyrolled) or via Baddieapple/GoodSilver (keyrolled).",
+    compat: "✓ Most boards · ChromeOS v125–v143 (kernver 4–6) · Persistent until powerwash",
+    steps: [
+      "<b>If unkeyrolled (can boot SH1MMER):</b> Boot SH1MMER (Dec 15 2025 or later), go to Payloads → Quicksilver, follow setup",
+      "<b>If keyrolled:</b> Do Sh1ttyExec first → enable dev mode → enter recovery → boot GoodSilver or Baddieapple image",
+      "In the shell, run:<br><code>vpd -i RW_VPD -s re_enrollment_key=\"$(openssl rand -hex 32)\"</code>",
+      "Reboot and go through setup — you are unenrolled. Persistent on ≤ v142",
+      "On older SH1MMER (pre-Dec 2025), run the command manually from the bash shell after selecting deprovision"
+    ],
+    dlUrl: false
+  },
+  sh1ttyexec: {
+    name: "Sh1ttyExec", difficulty: "easy", tag: "mt-easy",
+    desc: "Triggers a race condition during enrollment to temporarily set block_devmode=0 in VPD, allowing unverified recovery and code execution paths. Commonly used for BadRecovery/Quicksilver on keyrolled devices.",
+    compat: "✓ All managed boards · ChromeOS R138–R143 only · No USB required",
+    steps: [
+      "Powerwash the device and begin enrollment from the OOBE screen",
+      "On the enrollment screen (NOT 'Please wait'), press <b>CTRL + ALT + SHIFT + R</b> to open the powerwash menu",
+      "Wait for the device to crash back to the OOBE screen",
+      "Start enrollment again",
+      "As soon as the enrollment screen appears (timing sensitive), press <b>ESC + Refresh + Power</b>",
+      "If done correctly, the device will reboot with <b>block_devmode = 0</b> temporarily set",
+      "Immediately enter recovery mode with <b>ESC + Refresh + Power</b>",
+      "Press <b>CTRL + D</b> then Enter, then re-enter recovery (<b>ESC + Refresh + Power</b>) and insert your USB",
+      "You can now boot unverified recovery images and proceed with BadRecovery or Quicksilver"
+    ],
+    dlUrl: false
+  },
+  sh1ttyoobe: {
+name: "Sh1ttyOOBE", difficulty: "medium", tag: "mt-med",
+desc: "Bypasses the managed OOBE enrollment loop on ChromeOS 133–137 without any USB or hardware. Provides a persistent unenrolled session until the next powerwash.",
+compat: "✓ All managed boards · ChromeOS v133–v137 · No USB required",
+steps: [
+  "Powerwash the device and wait on the 'Welcome to your Chromebook' screen",
+  "Wait for the <b>Quick set up with Android</b> button to appear (do NOT press Get Started if it is not visible)",
+  "Press <b>CTRL + ALT + SHIFT + R</b> and click Cancel",
+  "Select <b>Enter your Google account email and password</b> — it will prompt for network connection",
+  "Open Quick Settings from the bottom right and connect to Wi-Fi",
+  "Sign in with your school / org account, then immediately sign out",
+  "Go through OOBE normally — Get Started → Next → sign in with the same account",
+  "It will hang on 'Please wait' — press <b>Alt + Vol Up + X</b> or restart the device",
+  "You will land on the lockscreen; the device is now unenrolled for this session (persists until powerwash)",
+  "From here, you can proceed with developer mode or further methods for permanent unenrollment"
+    ],
+    dlUrl: false
+  },
+  br1ck: {
+    name: "BR1CK", difficulty: "medium", tag: "mt-med",
+    desc: "Exploit (Oct 2024, found by FWSmasher) that interrupts FWMP creation in the TPM by EC-resetting at the right moment. Leaves a blank FWMP, allowing SH1MMER to run. Works on non-platform-FWMP Cr50 boards, ChromeOS ≤ v131.",
+    compat: "✓ Non-platform-FWMP Cr50 boards only (NOT: nissa, corsola, brya, brask, cherry, guybrush, skyrim, rex, staryu, geralt) · ChromeOS ≤ v131",
+    steps: [
+      "Verify your board is NOT in the platform FWMP list (see compat note above)",
+      "Access <code>chrome://network#logs</code> if possible for later steps",
+      "EC reset the device by pressing <b>Refresh + Power</b> at just the right moment during managed boot to interrupt FWMP creation",
+      "Once bricked (blank FWMP state), boot a SH1MMER shim for your board",
+      "Inside SH1MMER: run TPM reset twice via Factory Install → TPM Reset, then run Deprovision, Disable Dev Block, Allow USB Boot",
+      "Open the bash shell, run: <code>gsctool -a -k</code> then <code>gsctool -a -o</code>",
+      "Complete setup — device is unenrolled. Fix the TPM brick with <code>gsctool -a -o 1</code> if needed"
+    ],
+    dlUrl: false
+  },
+  pencil: {
+    name: "Pencil / Hardware WP Bypass", difficulty: "hard", tag: "mt-hard",
+    desc: "Physical write-protect bypass for Ti50 boards where software methods don't work. Requires opening the Chromebook and bridging write-protect pads with a pencil (graphite conducts) or removing the WP screw. Once WP is off, run unkeyroll or set GBB flags.",
+    compat: "⚠ Ti50 boards (brya, nissa, guybrush, skyrim, rex, etc.) · Any ChromeOS version · Requires physical disassembly",
+    steps: [
+      "⚠ This requires physically opening your Chromebook. Look up a teardown for your specific model on <a href='https://www.ifixit.com' target='_blank' style='color:var(--blue)'>iFixit</a>",
+      "Locate the write-protect pad or screw on the motherboard (varies by model)",
+      "Bridge WP pads with a pencil tip (graphite is a conductor) or remove the WP screw",
+      "Boot into recovery mode with WP now disabled",
+      "Flash custom firmware or run unkeyroll to remove enrollment locks and keyroll",
+      "Set GBB flags using <code>futility gbb --set --flags=0xa0b1 /dev/sda</code> (see GBB tutorial in utilities below)",
+      "Re-assemble. Now you can use Baddieapple, run br0ker, or proceed normally"
+    ],
+    dlUrl: false
+  },
+  legacy: {
+    name: "Legacy / Dev Mode", difficulty: "medium", tag: "mt-med",
+    desc: "EOL and pre-2019 boards often don't enforce firmware-level enrollment, allowing direct developer mode activation. Some can be unenrolled just by enabling dev mode.",
+    compat: "✓ EOL boards (pre-2019) · H1 EC · kernver 1 · No FWMP enforcement in most cases",
+    steps: [
+      "These boards are often EOL and may not enforce firmware-level enrollment locks",
+      "Try enabling developer mode directly: <b>Esc + Refresh + Power</b>, then <b>Ctrl+D</b> on the boot screen",
+      "If blocked by FWMP, use SH1MMER if a shim exists for your board (check <a href='https://sh1mmer.me' target='_blank' style='color:var(--blue)'>sh1mmer.me</a> or crosbreaker)",
+      "Very old boards (≤ v100) may be unenrollable via Crosh exploits — check the Crosbreaker Discord for specifics",
+      "As a last resort, leaked RMA shims exist for many legacy boards at <a href='https://sh1mmer.me' target='_blank' style='color:var(--blue)'>sh1mmer.me</a> or community mirrors"
+    ],
+    dlUrl: false
+  }
+};
+
+// ── GBB FLAG PROFILES ──
+const GBB_PROFILES = {
+  Ti50: {
+    note: "Ti50 board — hardware WP must be physically disabled first (see Disabling WP guide below) before GBB flags can be written. Software WP override via gsctool will not work on Ti50.",
+    recommended: "0xa0b1",
+    steps: [
+      "Disable hardware WP first using the Ti50 CCD method (see Disabling WP below)",
+      "Once WP is off, boot into developer mode and open a root shell (VT2: <code>Ctrl+Alt+F2</code>, login: root)",
+      "Write new flags (replace 0xa0b1 with your desired value):<br><code>futility gbb --set --flags=0xa0b1 /dev/sda</code>",
+      "Reboot. GBB flags are now set in firmware."
+    ]
+  },
+  Cr50: {
+    note: "Cr50 board — WP is tied to battery connection. Disconnect battery briefly to disable hardware WP, then use futility to write GBB flags.",
+    recommended: "0xa0b1",
+    steps: [
+      "Disable hardware WP by disconnecting the battery (see Disabling WP below)",
+      "Boot into developer mode and open a root shell (VT2: <code>Ctrl+Alt+F2</code>, login: root)",
+      "Confirm WP is off: <code>flashrom --wp-status</code> should show WP disabled",
+      "Write new flags:<br><code>futility gbb --set --flags=0xa0b1 /dev/sda</code>",
+      "Reboot. Flags take effect on next boot."
+    ]
+  },
+  H1: {
+    note: "H1 (legacy) EC — WP is controlled by battery connection. Very easy to disable. Use futility to write GBB after WP is off.",
+    recommended: "0xa0b1",
+    steps: [
+      "Disconnect the battery to disable hardware WP (see Disabling WP below)",
+      "Boot into developer mode and open a root shell (VT2: <code>Ctrl+Alt+F2</code>, login: root)",
+      "Write new flags:<br><code>futility gbb --set --flags=0xa0b1 /dev/sda</code>",
+      "Reconnect battery, reboot normally."
+    ]
+  }
+};
+
+let selectedBoard = null;
+
+// PAGE 1 TYPEWRITER
+const P1_LINES = [
+  {cls:"cmd",  text:"check_enrollment_status"},
+  {cls:"ok",   text:"ENROLLED: TRUE  ·  ADMIN POLICIES: ACTIVE"},
+  {cls:"cmd",  text:"initiate device_management_client --bypass-fwmp"},
+  {cls:"warn", text:"⚠ modifying system-level protections"},
+  {cls:"warn", text:"⚠ admin restrictions will be removed"},
+  {cls:"cmd",  text:"status"},
+  {cls:"done", text:"✓ ENROLLED: FALSE  ·  OWNER: USER"},
+];
+
+function animatePage1() {
+  const term = document.getElementById('p1terminal');
+  const body = document.getElementById('p1body');
+  term.style.transition = 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)';
+  term.style.opacity = '1';
+  term.style.transform = 'translateY(0)';
+  let lineIdx = 0, charIdx = 0;
+  let currentSpan = null;
+  function nextChar() {
+    if (lineIdx >= P1_LINES.length) return;
+    const line = P1_LINES[lineIdx];
+    if (charIdx === 0) {
+      currentSpan = document.createElement('span');
+      currentSpan.className = 'tl ' + line.cls;
+      body.appendChild(currentSpan);
+    }
+    if (charIdx < line.text.length) {
+      currentSpan.textContent += line.text[charIdx];
+      charIdx++;
+      setTimeout(nextChar, line.cls === 'cmd' ? 38 : 18);
+    } else {
+      lineIdx++; charIdx = 0;
+      setTimeout(nextChar, line.cls === 'cmd' ? 320 : 80);
+    }
+  }
+  setTimeout(nextChar, 600);
+}
+
+function showPage(n) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page'+n).classList.add('active');
+  window.scrollTo(0,0);
+  if (n === 2) {
+    const t = document.getElementById('inputTerminal');
+    t.style.transition = 'none';
+    t.style.opacity = '0'; t.style.transform = 'translateY(28px)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      t.style.transition = 'opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1)';
+      t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+    }));
+    setTimeout(() => document.getElementById('boardInput').focus(), 400);
+  }
+}
+
+function onBoardInput() {
+  const val = document.getElementById('boardInput').value.trim().toLowerCase();
+  const sugDiv = document.getElementById('suggestions');
+  const resDiv = document.getElementById('boardResult');
+  const confirmBtn = document.getElementById('confirmBtn');
+  selectedBoard = null;
+  confirmBtn.classList.remove('ready');
+  if (!val) {
+    sugDiv.innerHTML = '';
+    resDiv.innerHTML = '<span class="r-hint">Type your board name above…</span>';
+    return;
+  }
+  const matches = BOARD_NAMES.filter(b => b.startsWith(val));
+  const exact   = BOARD_NAMES.includes(val);
+  if (exact) {
+    selectedBoard = val;
+    confirmBtn.classList.add('ready');
+    resDiv.innerHTML = `<span class="r-found">✓ recognised: <strong>${BOARD_DB[val].label}</strong> — ${BOARD_DB[val].platform}</span>`;
+  } else if (matches.length) {
+    resDiv.innerHTML = `<span class="r-hint">${matches.length} match${matches.length>1?'es':''} — select one below</span>`;
+  } else {
+    resDiv.innerHTML = `<span class="r-notfound">✗ not found — check chrome://version → Platform (word after stable-channel)</span>`;
+  }
+  sugDiv.innerHTML = matches.slice(0,10).map(b =>
+    `<span class="tag${b===selectedBoard?' selected':''}" onclick="selectBoard('${b}')">${b}</span>`
+  ).join('');
+}
+
+function selectBoard(n) {
+  document.getElementById('boardInput').value = n;
+  onBoardInput();
+}
+
+function confirmBoard() {
+  if (!selectedBoard) return;
+  buildPage3(selectedBoard);
+  showPage(3);
+}
+
+// ── Latest stable ChromeOS version per board (from cros.tech) ──
+// Active boards show current stable; EOL boards show their last version.
+const BOARD_LATEST = {
+  // EOL / H1
+  hana:"R107",   kukui:"R107",  kodama:"R117", kakadu:"R117", kappa:"R117", fennel:"R117", flapjack:"R117", krane:"R117",
+  bob:"R107",    kevin:"R107",  scarlet:"R107",
+  samus:"R96",   veyron:"R96",  cyan:"R107",   elm:"R107",    oak:"R107",
+  clapper:"R100",glimmer:"R100",gnawty:"R100", enguarde:"R100",kip:"R100",winky:"R100",banjo:"R100",candy:"R100",orco:"R100",relm:"R100",swanky:"R100",
+  auron:"R96",   tidus:"R96",   paine:"R96",   yuna:"R96",    gandof:"R96",  lulu:"R96",    lars:"R96",
+  falco:"R96",   peppy:"R96",   leon:"R96",    wolf:"R96",    mccloud:"R96", panther:"R96",
+  daisy:"R90",   snow:"R90",    peach:"R90",   pit:"R90",     pi:"R90",
+  nyan:"R90",    nyan_big:"R90",nyan_blaze:"R90",
+  stout:"R96",   sumo:"R90",    mario:"R90",   stumpy:"R90",
+  // EOL Cr50 Skylake
+  caroline:"R120",cave:"R120",  chell:"R120",  burnet:"R120", edgar:"R120",
+  // Active boards — current stable as of R145/R146
+  octopus:"R145",blooglet:"R145",bobba:"R145",dood:"R145",foob:"R145",garg:"R145",lick:"R145",meowth:"R145",mimrock:"R145",moonrock:"R145",nasher:"R145",orbatrix:"R145",phaser360:"R145",sparky:"R145",sparky360:"R145",ampton:"R145",
+  grunt:"R145",  barla:"R145",  careena:"R145",kasumi:"R145", treeya:"R145", nuwani:"R145",
+  coral:"R145",  astronaut:"R145",babymega:"R145",babytiger:"R145",blacktip:"R145",bruce:"R145",casta:"R145",epaulette:"R145",guard:"R145",laser:"R145",lava:"R145",nasher360:"R145",rabbid:"R145",robo360:"R145",santa:"R145",serpent:"R145",whitetip:"R145",reks:"R145",jacuzzi:"R145",jonquil:"R145",kindred:"R145",kingler:"R145",phaser:"R145",quillback:"R145",starfish:"R145",reef:"R145",sand:"R145",snappy:"R145",pyro:"R145",electro:"R145",
+  zorba:"R145",  banon:"R145",
+  // Kaby Lake / Comet Lake era
+  eve:"R131",    nocturne:"R131",atlas:"R131",  rammus:"R131", shyvana:"R131",
+  nami:"R131",   akali:"R131",  bard:"R131",   ekko:"R131",   sona:"R131",   pantheon:"R131",fizz:"R131",ultima:"R131",
+  // Hatch / Volteer / Tiger Lake (still active)
+  hatch:"R145",  kohaku:"R145", helios:"R145", jinlon:"R145", dratini:"R145",morphius:"R145",
+  volteer:"R145",voxel:"R145",  voema:"R145",  volta:"R145",  volet:"R145",  vorlage:"R145", syndra:"R145",sarien:"R145",vayne:"R145",palkia:"R145",fleex:"R145",drallion:"R145",arcada:"R145",akemi:"R145",wahoo:"R145",
+  // Qualcomm Trogdor
+  trogdor:"R145",lazor:"R145",  limozeen:"R145",pompom:"R145",wormdingler:"R145",coachz:"R145",mrbossian:"R145",quackingstick:"R145",puff:"R145",dragonair:"R145",strongbad:"R145",kingoftown:"R145",homestar:"R145",
+  // MTK Asurada/Cherry
+  asurada:"R145",hayato:"R145", cherry:"R145", tomato:"R145", damu:"R145",   myst:"R145",
+  corsola:"R145",magneton:"R145",dojo:"R145",
+  // Dedede
+  dedede:"R145", metaknight:"R145",waddledoo:"R145",shredder:"R145",lillipup:"R145",nightfury:"R145",steelix:"R145",tentacruel:"R145",walrein:"R145",madoo:"R145",tiger:"R145",zako:"R145",
+  // Zork / Cezanne
+  zork:"R145",   dalboz:"R145", dirinboz2:"R145",ezkinil:"R145",gooey:"R145",woomax:"R145",zorro:"R145",
+  // Brya / Nissa / Guybrush / Skyrim / Rex
+  brya:"R146",   felwinter:"R146",primus:"R146",taeko:"R146",  craask:"R146", crota:"R146",  brask:"R146",  lismore:"R146",dirinboz:"R146",berknip:"R146",
+  nissa:"R146",  pujjo:"R146",  pujjo1e:"R131",pujjocento:"R146",pujjoga:"R146",pujjogatwin:"R146",pujjolo:"R146",pujjoniru:"R146",pujjoquince:"R146",pujjoteen:"R146",pujjoteenlo:"R146",
+  guybrush:"R146",skyrim:"R146",vilboz:"R146", nipperkin:"R146",jelboz:"R146",jelboz64:"R146",kasumi360:"R146",
+  // New board families
+  skywalker:"R146",anakin:"R146",anakin360:"R146",baze:"R146",jye:"R146",obiwan:"R146",
+  rauru:"R146",hylia:"R146",navi:"R146",
+  brask:"R146",aurash:"R146",bujia:"R146",gladios:"R146",kinox:"R146",kuldax:"R146",lisbon:"R146",moli:"R146",moxie:"R146",
+  brox:"R146",caboc:"R146",jubilant:"R146",jubileum:"R146",lotso:"R146",
+  ovis:"R146",deku:"R146",
+  sarien:"R145",arcada:"R145",drallion:"R145",
+  jacuzzi:"R146",cozmo:"R146",esche:"R146",fennel14:"R146",juniper:"R146",kenzo:"R146",makomo:"R146",pico:"R146",
+  nirva:"R146",craaskyu2:"R146",
+  // brya subtypes missing
+  anahera:"R146",banshee:"R146",crota360:"R146",dochi:"R146",gimble:"R146",kano:"R146",marasov:"R146",mithrax:"R146",omnigul:"R146",omniknight:"R146",osiris:"R146",
+  // nissa subtypes missing
+  anraggar:"R146",anraggar360:"R146",craaskana:"R146",craaskbowl:"R146",craaskino:"R146",craaskvin:"R146",craasneto:"R146",craaswell:"R146",dirks:"R146",domika:"R146",domilly:"R146",domiso:"R146",gallida360:"R146",gana:"R146",glassway:"R146",gothrax:"R146",gothraxcs:"R146",guren:"R146",guren360:"R146",joxer:"R146",kaladin:"R146",kelsier:"R146",meliks:"R146",
+  // corsola subtypes
+  chinchou:"R146",chinchou360:"R146",keldeo:"R146",kyogre:"R146",ponyta360:"R145",
+  // dedede subtypes missing
+  awadoron:"R146",awasuki:"R146",beadrix:"R146",beetley:"R146",blipper:"R146",bookem:"R146",boten:"R146",boxy:"R146",bugzzy:"R146",cret:"R146",cret360:"R146",drawcia:"R146",drawlat:"R146",drawman:"R146",drawper:"R146",galith:"R146",galith360:"R146",gallop:"R146",galnat:"R146",galnat360:"R146",galtic:"R146",galtic360:"R146",kracko:"R146",kracko360:"R146",landia:"R146",landrid:"R146",lantis:"R146",magister:"R146",maglet:"R146",maglia:"R146",maglith:"R146",magma:"R146",magneto:"R146",magolor:"R146",magpie:"R146",palutena:"R146",pasara:"R146",peezer:"R146",pirette:"R146",pirika:"R146",
+  // octopus subtypes missing
+  aleena:"R146",bloog:"R146",blooguard:"R146",blorb:"R146",bluebird:"R146",bobba360:"R146",dorp:"R146",droid:"R146",foob360:"R146",garfour:"R146",garg360:"R146",laser14:"R146",meep:"R146",nospike:"R146",
+  // grunt subtypes missing
+  liara:"R146",kasumi360:"R146",
+  // rex subtypes
+  ciri:"R146",kanix:"R146",karis:"R146",
+  // guybrush subtypes missing
+  dewatt:"R146",
+  // volteer subtypes missing
+  chronicler:"R146",collis:"R146",copano:"R146",delbin:"R146",drobit:"R146",eldrid:"R146",lindar:"R146",
+  // puff subtypes missing
+  dooly:"R146",duffy:"R146",faffy:"R146",kaisa:"R146",noibat:"R146",
+  // skyrim subtypes missing
+  crystaldrift:"R146",frostflow:"R146",markarth:"R146",
+  // trogdor subtypes missing
+  pazquel:"R145",pazquel360:"R145",
+  // zork subtypes missing
+  berknip2:"R146",jelboz360:"R146",gumboz:"R146",
+  // kukui/jacuzzi subtypes
+  katsu:"R146",
+};
+
+// ── Returns the single best method key for a board ──
+function getRecommendedKey(board, data) {
+  const ec = data.ec;
+  const kvMax = parseInt(data.kv.split('–').pop());
+  const kvMin = parseInt(data.kv.split('–')[0]);
+  const methods = data.methods;
+  const has = k => methods.includes(k);
+
+  if (ec === 'H1') return has('legacy') ? 'legacy' : methods[0];
+
+  if (ec === 'Ti50') {
+    if (kvMin >= 7) return has('pencil') ? 'pencil' : methods[0];
+    // Baddieapple is easier — download + flash, no timing required
+    if (has('baddieapple')) return 'baddieapple';
+    if (has('sh1ttyexec')) return 'sh1ttyexec';
+    return methods[0];
+  }
+
+  // Cr50 — depends on actual kv range
+  if (kvMax <= 3) {
+    if (has('sh1mmer')) return 'sh1mmer';
+    if (has('badrecovery')) return 'badrecovery';
+  }
+  if (kvMin >= 5) {
+    if (has('baddieapple')) return 'baddieapple';
+    if (has('sh1ttyexec')) return 'sh1ttyexec';
+  }
+  if (kvMin >= 4) {
+    if (has('quicksilver')) return 'quicksilver';
+    if (has('sh1ttyexec')) return 'sh1ttyexec';
+  }
+  // Wide range — SH1MMER is best starting point, user checks their kv
+  if (has('sh1mmer')) return 'sh1mmer';
+  if (has('badrecovery')) return 'badrecovery';
+  return methods[0];
+}
+
+function getRecommended(board, data) {
+  const kvMax = parseInt(data.kv.split('–').pop());
+  const kvMin = parseInt(data.kv.split('–')[0]);
+  const ec = data.ec;
+
+  // kv7 — no working exploit
+  if (kvMax >= 7 && kvMin >= 7) {
+    return `<span style="color:var(--red);">kv7 only — no known public exploit yet.</span> Wait for new community methods. If you can downgrade via recovery USB, check cros.tech for a kv6 (≤R142) build, then use <b>Baddieapple + Quicksilver</b>.`;
+  }
+  // Ti50 boards hitting kv7 (5–7, 6–7)
+  if (ec === 'Ti50' && kvMax >= 7) {
+    return `If currently on <b>kv5/kv6</b> (R132–R142): use <b>Baddieapple + Quicksilver</b>. If on <b>kv7</b> (R143+): no consistent exploit yet. Try downgrading to ≤R142 via recovery USB first. If R133–R142, <b>Sh1ttyExec + Quicksilver</b> also works.`;
+  }
+  // Ti50 kv5–6
+  if (ec === 'Ti50') {
+    return `<b>Baddieapple + Quicksilver</b> is the primary method. On R133–R137 (kv5): <b>Sh1ttyOOBE</b> also works without a USB. On R138–R142 (kv6): use <b>Sh1ttyExec + Quicksilver</b>. Pencil/WP bypass available if software methods fail.`;
+  }
+  // Cr50 heavily keyrolled (kv5–6)
+  if (ec === 'Cr50' && kvMin >= 5) {
+    return `<b>Baddieapple + Quicksilver</b> for R125–R142. On R133–R137: <b>Sh1ttyOOBE</b> works without a USB. On R125+: <b>BadBr0ker</b> available on kv5 (≤R132). Downgrade to ≤R124 via recovery USB to use SH1MMER/BadRecovery on kv3.`;
+  }
+  // Cr50 range including low kv (3–6, 2–6, 1–6 etc)
+  if (ec === 'Cr50' && kvMax >= 5) {
+    return `Check your current kv first (recovery screen → Tab → last digit of tpm_kernver). <b>If kv3 or lower</b>: use <b>SH1MMER</b> — easiest method. <b>If kv4</b> (R125–R131): use <b>Sh1ttyExec + Quicksilver</b> or downgrade to ≤R124. <b>If kv5+</b>: use <b>Baddieapple + Quicksilver</b> or Sh1ttyOOBE/Sh1ttyExec.`;
+  }
+  // Cr50 kv3–4
+  if (ec === 'Cr50' && kvMax >= 4) {
+    return `<b>Check your current kv first.</b> If on <b>kv3 or below</b> (≤R124): <b>SH1MMER</b> is the easiest — boot it and hit Un-Enroll. If on <b>kv4</b> (R125–R131): use <b>Sh1ttyExec + Quicksilver</b>, or downgrade to ≤R124 via recovery USB for SH1MMER/BadRecovery.`;
+  }
+  // Cr50 kv2–3 — mostly unkeyrolled
+  if (ec === 'Cr50' && kvMax <= 3) {
+    return `<b>SH1MMER</b> is the easiest path — download the shim from dl.crosbreaker.dev, flash to USB, boot it, and hit Un-Enroll. If SH1MMER is unavailable for your board, <b>BadRecovery</b> is the fallback. Both work cleanly on kv3 and below.`;
+  }
+  // H1 legacy
+  if (ec === 'H1') {
+    return `Legacy H1 board. Try enabling <b>developer mode directly</b> first (Esc+Refresh+Power → Ctrl+D). If FWMP blocks it, use <b>SH1MMER</b> if a shim exists for your board. Most H1 boards have no FWMP enforcement at all.`;
+  }
+  return `Check your current kv in recovery mode (Tab key), then pick the appropriate method above.`;
+}
+
+function buildPage3(board) {
+  const data = BOARD_DB[board];
+  if (!data) return;
+
+  // Clear previous row2 if exists
+  const row2el = document.getElementById('p3row2');
+  row2el.innerHTML = '';
+
+  document.getElementById('p3badge').textContent = board.toUpperCase();
+  document.getElementById('p3title').textContent = data.label;
+
+  const ecColor = data.ec === 'Ti50' ? 'yellow' : (data.ec === 'Cr50' ? 'green' : '');
+  const kvRaw = data.kv;
+  const recKey = getRecommendedKey(board, data);
+  const recName = METHODS[recKey] ? METHODS[recKey].name : '—';
+
+  const grid = document.getElementById('p3grid');
+  const latestVer = BOARD_LATEST[board] || '—';
+  grid.innerHTML = `
+    <div class="info-card">
+      <div class="label">Platform</div>
+      <div class="value">${data.platform}</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Architecture</div>
+      <div class="value">${data.arch}</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Security Chip</div>
+      <div class="value ${ecColor}">${data.ec}</div>
+      <div class="sub-val">${data.ec === 'Ti50' ? 'Newer — limits exploit options' : data.ec === 'Cr50' ? 'Standard — most exploits work' : 'Legacy EC'}</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Latest Version</div>
+      <div class="value">${latestVer}</div>
+      <div class="sub-val">Recommended: <span style="color:var(--green)">${recName}</span></div>
+    </div>
+  `;
+
+  // Row 2
+  const kvMax = parseInt(kvRaw.split('–').pop());
+  const kvMin = parseInt(kvRaw.split('–')[0]);
+  let keyrollStatus, keyrollSub, keyrollColor;
+  if (data.ec === 'H1') {
+    keyrollStatus = 'Legacy / EOL'; keyrollSub = 'kv1 — no FWMP on most boards'; keyrollColor = 'green';
+  } else if (data.ec === 'Ti50') {
+    keyrollStatus = 'Keyrolled (Ti50)'; keyrollSub = 'SH1MMER cannot boot'; keyrollColor = 'yellow';
+  } else if (kvMax >= 5) {
+    keyrollStatus = 'Keyrolled (Cr50)'; keyrollSub = 'SH1MMER needs downgrade to ≤kv4'; keyrollColor = 'yellow';
+  } else {
+    keyrollStatus = 'Unkeyrolled'; keyrollSub = 'SH1MMER likely works'; keyrollColor = 'green';
+  }
+
+  row2el.style.cssText = 'width:100%;max-width:560px;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;flex-shrink:0;';
+  row2el.innerHTML = `
+    <div class="info-card">
+      <div class="label">Methods Available</div>
+      <div class="value green">${data.methods.length} method${data.methods.length!==1?'s':''}</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Keyroll Status</div>
+      <div class="value ${keyrollColor}">${keyrollStatus}</div>
+      <div class="sub-val">${keyrollSub}</div>
+    </div>
+  `;
+
+  // Recommended method box — removed, shown inline in method list instead
+
+  // Subtypes
+  const stDiv = document.getElementById('p3subtypes');
+  if (data.subtypes && data.subtypes.length > 0) {
+    stDiv.innerHTML = '<span style="font-size:0.62rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-right:8px;">Subtypes:</span>' +
+      data.subtypes.map(s => `<span class="subtype-tag">${s}</span>`).join('');
+  } else {
+    stDiv.innerHTML = '';
+  }
+
+  // Latest version now shown in info grid card above
+
+  // Methods
+  const list = document.getElementById('methodsList');
+  list.innerHTML = '';
+  data.methods.forEach((mKey, i) => {
+    const m = METHODS[mKey];
+    if (!m) return;
+    const isRec = mKey === recKey;
+    const card = document.createElement('div');
+    card.className = 'method-card' + (isRec ? ' method-recommended' : '');
+    const dlHtml = m.dlUrl
+      ? `<a class="dl-btn" href="https://dl.crosbreaker.dev/recovery-images/${board}" target="_blank">↓ Download Recovery Image</a>`
+      : '';
+    const stepsHtml = m.steps.map(s => `<li>${s}</li>`).join('');
+    const recBadge = isRec ? `<span class="rec-badge">RECOMMENDED</span>` : '';
+    card.innerHTML = `
+      <div class="method-header" onclick="toggleAccordion(this)">
+        <span class="method-name">${m.name}${recBadge}</span>
+        <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span class="method-tag ${m.tag}">${m.difficulty}</span>
+          <span class="chevron">▾</span>
+        </span>
+      </div>
+      <div class="method-body${isRec ? ' open' : ''}">
+        <p>${m.desc}</p>
+        <div class="method-compat">${m.compat}</div>
+        <ol style="margin-top:12px">${stepsHtml}</ol>
+        ${dlHtml}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  // Utilities
+  buildUtilities(board, data);
+}
+
+function buildUtilities(board, data) {
+  const list = document.getElementById('utilitiesList');
+  list.innerHTML = '';
+
+  const gbbProfile = GBB_PROFILES[data.ec] || GBB_PROFILES['Cr50'];
+  const isKeyrolled = data.ec === 'Ti50' || parseInt(data.kv.split('–').pop()) >= 5;
+  const isLegacy = data.ec === 'H1';
+
+  const UTILITIES = [
+    {
+      icon: '[DAUB]',
+      name: 'DAUB — Depthcharge Auto Update Blocker',
+      tag: 'ut-util', tagLabel: 'Utility',
+      body: `
+        <p>DAUB prevents ChromeOS from auto-updating by blocking the update check at the depthcharge (bootloader) level. Unlike OS-level update toggles which can be overridden by admin policy, DAUB operates below the OS.</p>
+        <h4>How to use</h4>
+        <p>Run from a root shell (VT2 or crosh → shell → sudo su):</p>
+        <div class="code-block">curl -sSL https://b2.crosbreaker.dev/file/crosbreaker/CDN/daub.sh | sudo bash</div>
+        <div class="note-box">DAUB is also available as a payload inside SH1MMER: Payloads → DAUB.</div>
+        <div class="warn-box">DAUB only prevents version bumps. If the device gets powerwashed or recovered, it will return to the latest version. Re-run DAUB after any recovery.</div>
+        <a class="ext-link blue-link" href="https://crosbreaker.dev" target="_blank">↗ crosbreaker.dev</a>
+      `
+    },
+    {
+      icon: '[SAUB]',
+      name: 'SAUB — Server Auto Update Blocker',
+      tag: 'ut-util', tagLabel: 'Utility',
+      body: `
+        <p>SAUB (by CriticalHD) removes rootfs verification, which prevents ChromeOS from re-verifying and overwriting system files on each boot — including any update-blocking patches you've applied. This works until the next recovery; if you recover the device you will need to re-run it.</p>
+        <div class="note-box">SAUB does not affect system integrity in a harmful way — it only removes rootfs verification. After running it, you must reboot and then re-run the script for the changes to fully take effect.</div>
+        <div class="warn-box">To return to verified mode you will need to recover the device.</div>
+        <h4>Run SAUB</h4>
+        <div class="code-block">curl -sSL https://raw.githubusercontent.com/CriticalHD/Myscripts/refs/heads/main/SAUB | sudo bash</div>
+        <p>After it completes: <strong>reboot</strong>, then <strong>re-run the script</strong> once more to fully apply.</p>
+        <a class="ext-link blue-link" href="https://github.com/CriticalHD/Myscripts" target="_blank">↗ CriticalHD/Myscripts on GitHub</a>
+      `
+    },
+    {
+      icon: '[WP]',
+      name: 'Disabling Write Protect',
+      tag: 'ut-guide', tagLabel: 'Guide',
+      body: buildWpBody(board, data)
+    },
+    {
+      icon: '[GBB]',
+      name: 'GBB Flags Tutorial',
+      tag: 'ut-guide', tagLabel: 'Guide',
+      body: buildGbbBody(board, data, gbbProfile)
+    },
+    {
+      icon: '[DEV]',
+      name: 'How to Enable Developer Mode',
+      tag: 'ut-guide', tagLabel: 'Guide',
+      body: buildDevModeBody(board, data, isLegacy, isKeyrolled)
+    },
+    {
+      icon: '[DL]',
+      name: 'Downgrade ChromeOS Version',
+      tag: 'ut-tool', tagLabel: 'Tool',
+      body: `
+        <p>Downgrading ChromeOS to a vulnerable version is often required before running exploits. The cleanest way is a recovery USB for the exact version you need.</p>
+        <h4>Method 1: Recovery USB (recommended)</h4>
+        <ol>
+          <li>Go to <a href="https://cros.tech/board/${board}" target="_blank" style="color:var(--blue)">cros.tech/board/${board}</a> and pick the target version</li>
+          <li>Download the recovery image for your board</li>
+          <li>Flash to USB with Chromebook Recovery Utility (use "Use local image" option) or <code>dd</code></li>
+          <li>Enter recovery mode (<b>Esc + Refresh + Power</b>) and plug in USB</li>
+          <li>ChromeOS installs that version. Block updates with DAUB or SAUB immediately after</li>
+        </ol>
+        <h4>Method 2: From inside SH1MMER or Baddieapple shell</h4>
+        <p>If you're already in a recovery shell, you can trigger a downgrade to a specific version by booting the recovery image directly from SH1MMER's payload menu or by flashing it while already in the miniOS shell.</p>
+        <div class="note-box">Always run DAUB or SAUB immediately after landing on your target version to prevent auto-update.</div>
+        <a class="ext-link blue-link" href="https://cros.tech/board/${board}" target="_blank">↗ Browse versions for ${board} on cros.tech</a>
+      `
+    },
+    {
+      icon: '[UK]',
+      name: 'Unkeyroll (Remove Keyroll)',
+      tag: 'ut-tool', tagLabel: 'Tool',
+      body: `
+        <p>Unkeyrolling reverts the GSC from kv5/kv6 back to kv3, re-enabling SH1MMER and other unkeyrolled-only exploits. Requires hardware write-protect to be disabled first.</p>
+        ${isKeyrolled ? `<div class="device-gbb-hint">${board.toUpperCase()} is a keyrolled board (kv${data.kv}) — unkeyrolling is relevant for you if you want to use SH1MMER.</div>` : `<div class="success-box">${board.toUpperCase()} is unkeyrolled (kv${data.kv}). Unkeyroll is likely not needed.</div>`}
+        <h4>Prerequisites</h4>
+        <ol>
+          <li>Hardware WP disabled (see Disabling WP above)</li>
+          <li>Access to a root shell (SH1MMER, Baddieapple, or crosh)</li>
+        </ol>
+        <h4>Run unkeyroll</h4>
+        <div class="code-block">curl -sSL https://b2.crosbreaker.dev/file/crosbreaker/CDN/unkeyroll.sh | sudo bash</div>
+        <div class="warn-box">Unkeyrolling reflashes GSC firmware. On Ti50 boards, WP must be physically disabled first. Do NOT interrupt this process — interrupting it can brick the GSC.</div>
+      `
+    },
+    {
+      icon: '[?]',
+      name: 'Community & Resources',
+      tag: 'ut-util', tagLabel: 'Links',
+      body: `
+        <p>Official sources, tools, and community hubs for ChromeOS unenrollment.</p>
+        <h4>Shims & Images</h4>
+        <a class="ext-link blue-link" href="https://dl.crosbreaker.dev" target="_blank">↗ dl.crosbreaker.dev</a>
+        <a class="ext-link blue-link" href="https://crosbreaker.dev" target="_blank">↗ crosbreaker.dev</a>
+        <h4>GitHub Sources</h4>
+        <a class="ext-link blue-link" href="https://github.com/CoolElectronics/badrecovery" target="_blank">↗ BadRecovery</a>
+        <a class="ext-link blue-link" href="https://github.com/crosbreaker/baddieapple" target="_blank">↗ Baddieapple</a>
+        <a class="ext-link blue-link" href="https://github.com/CriticalHD/Myscripts" target="_blank">↗ SAUB</a>
+        <h4>ChromeOS Version Lookup</h4>
+        <a class="ext-link green-link" href="https://cros.tech/board/${board}" target="_blank">↗ cros.tech — ${board}</a>
+        <a class="ext-link green-link" href="https://chromiumdash.appspot.com/serving-builds" target="_blank">↗ Chromium Dash</a>
+        <h4>Community</h4>
+        <a class="ext-link" href="https://discord.gg/crosbreaker" target="_blank">↗ Crosbreaker Discord</a>
+      `
+    }
+  ];
+
+  UTILITIES.forEach((u, i) => {
+    const card = document.createElement('div');
+    card.className = 'util-card';
+    card.innerHTML = `
+      <div class="util-header" onclick="toggleAccordion(this)">
+        <div class="util-title-wrap">
+          <span class="util-name">${u.name}</span>
+        </div>
+        <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span class="util-tag ${u.tag}">${u.tagLabel}</span>
+          <span class="chevron">▾</span>
+        </span>
+      </div>
+      <div class="util-body">
+        ${u.body}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function buildWpBody(board, data) {
+  const isTi50 = data.ec === 'Ti50';
+  const isDedede = board === 'dedede' || (BOARD_DB[board] && BOARD_DB[board].platform && BOARD_DB[board].platform.includes('Jasper Lake'));
+  const isCr50 = data.ec === 'Cr50';
+
+  let deviceNote = '';
+  if (isTi50) {
+    deviceNote = `<div class="device-gbb-hint">${board.toUpperCase()} uses Ti50 — you can likely disable WP via the CCD method without opening the chassis. Check with the gsctool command below first.</div>`;
+  } else if (isDedede) {
+    deviceNote = `<div class="device-gbb-hint">${board.toUpperCase()} is a dedede board — it uses a jumper instead of a battery connector for WP. See the dedede method below.</div>`;
+  } else if (isCr50) {
+    deviceNote = `<div class="device-gbb-hint">${board.toUpperCase()} uses Cr50 — WP is tied to battery connection. You will need to open the chassis and disconnect the battery briefly.</div>`;
+  } else {
+    deviceNote = `<div class="note-box">${board.toUpperCase()} uses ${data.ec} — see the appropriate method below for your EC type.</div>`;
+  }
+
+  return `
+    <p>Write Protect (WP) prevents the firmware from being modified. Disabling it is required before setting GBB flags or running unkeyroll. The method depends on your device's security chip.</p>
+    <p style="font-size:0.68rem;color:rgba(255,255,255,0.4);">Big thanks to <a href="https://docs.mrchromebox.tech/docs/firmware/wp/disabling.html" target="_blank" style="color:var(--blue);border-bottom:1px solid rgba(96,165,250,0.3);">Mr. Chromebox</a> — his guide is extremely thorough and worth checking if you get stuck.</p>
+    ${deviceNote}
+
+    <h4>Method 1 — Ti50 CCD (no disassembly required on 2023+ devices)</h4>
+    <p>If your device is 2023 or later, the GSC is almost certainly Ti50, meaning WP can be disabled in software via CCD without opening the chassis.</p>
+    <div class="note-box">To check: boot dev mode, open VT2 (Ctrl+Alt+F2), login as root, run <code>gsctool -a -I | grep AllowUnverifiedRo</code>. If there's output, you have Ti50. No output = Cr50.</div>
+    <ol>
+      <li>Boot developer mode: enter recovery (Esc+Refresh+Power), press Ctrl+D, press Enter, let firmware boot, press Ctrl+D again</li>
+      <li>Open VT2 terminal: <b>Ctrl+Alt+F2</b>. Login: <code>root</code>. If a password is required, try <code>test0000</code>. If that fails, press Ctrl+C to restart.</li>
+      <li>Run <code>gsctool -a -o</code> to open CCD. The device will repeatedly prompt you to press the power button. Press it when prompted. The process takes ~5 minutes. The screen will go dark when you press it the final time.</li>
+      <li>Wait for the device to reboot. Boot dev mode and VT2 again, login as root.</li>
+      <li>Run the following commands:
+        <div class="code-block">gsctool -a -I AllowUnverifiedRo:always
+gsctool -a -w disable
+flashrom --wp-disable</div>
+      </li>
+    </ol>
+
+    <h4>Method 2 — Cr50 (battery disconnect)</h4>
+    <p>Cr50 boards enforce WP based on whether the battery is connected to the motherboard. Disconnecting it briefly disables WP.</p>
+    <ol>
+      <li><strong>Power off the device and disconnect any external power sources.</strong></li>
+      <li>Open the chassis with a screwdriver — avoid using force, you don't want to strip screws or crack the plastic.</li>
+      <li>Find the battery connector on the motherboard and gently pull it straight up to disconnect.</li>
+      <li>Replace the chassis (don't screw it yet for convenience) and plug in the charger.</li>
+      <li>Boot dev mode, open VT2 (Ctrl+Alt+F2), login as root.</li>
+      <li>Run: <code>flashrom --wp-disable</code></li>
+      <li>Power off, disconnect the charger, open the chassis again.</li>
+      <li>Reconnect the battery connector.</li>
+      <li>Close and screw the chassis. Connect the charger (required after battery disconnect to boot).</li>
+    </ol>
+
+    <h4>Method 3 — Dedede boards (jumper)</h4>
+    <p>Dedede boards use a jumper on the motherboard instead of a battery connector for WP control.</p>
+    <ol>
+      <li><strong>Power off and disconnect all power sources.</strong></li>
+      <li>Open the chassis.</li>
+      <li>Disconnect the battery connector first (as above).</li>
+      <li>Locate the WP jumper pads. If the holes are open, bridge them with a paperclip. If closed, use a solder bridge — or in a pinch, graphite from a pencil tip.</li>
+      <li>Reconnect the battery connector.</li>
+      <li>Plug in a charger, boot dev mode, open VT2, login as root.</li>
+      <li>Run: <code>flashrom --wp-disable</code></li>
+      <li>Power off and open the chassis again.</li>
+      <li>Disconnect the battery, remove the bridge from the jumper pads, reconnect the battery.</li>
+      <li>Close the chassis, plug in charger. Done.</li>
+    </ol>
+    <a class="ext-link blue-link" href="https://docs.mrchromebox.tech/docs/firmware/wp/disabling.html" target="_blank">↗ Mr. Chromebox — Full WP Disable Guide</a>
+  `;
+}
+
+function buildGbbBody(board, data, gbbProfile) {
+  return `
+    <p>GBB (Google Binary Block) flags are stored in firmware and control low-level boot behavior — including whether dev mode is allowed, how long the boot screen shows, and whether FWMP is respected.</p>
+    <div class="device-gbb-hint">${board.toUpperCase()} uses <strong>${data.ec}</strong> — ${gbbProfile.note}</div>
+    <h4>Key GBB flags</h4>
+    <table class="gbb-table">
+      <tr><th>Flag</th><th>Hex</th><th>What it does</th></tr>
+      <tr><td>DEV_SCREEN_SHORT_DELAY</td><td>0x0001</td><td>Shortens the dev mode boot delay from 30s to ~2s</td></tr>
+      <tr><td>FORCE_DEV_BOOT_USB</td><td>0x00010</td><td>Allows booting from an external USB even if dev_boot_usb=0</td></tr>
+      <tr><td>DISABLE_FW_ROLLBACK_CHECK</td><td>0x00020</td><td>Disables firmware rollback version check (allows downgrades)</td></tr>
+      <tr><td>FORCE_DEV_BOOT_ALTFW</td><td>0x0080</td><td>Enables booting from alternative firmware types</td></tr>
+      <tr><td>FORCE_UNLOCK_FASTBOOT</td><td>0x2000</td><td>Allows full fastbooting capability even in verified mode</td></tr>
+      <tr><td>DISABLE_FWMP</td><td>0x8000</td><td>Ignores FWMP (Firmware Management Parameters) — Clears enrollment locks</td></tr>
+    </table>
+    <h4>Recommended for ${board.toUpperCase()}</h4>
+    <div class="success-box">
+      <code>${gbbProfile.recommended}</code> = (0x0001) + (0x0010) + (0x0020) + (0x0080) + (0x2000) + (0x8000).<br>
+      This is the most useful combination for post-unenroll.
+    </div>
+    <h4>Steps for ${data.ec} (${board})</h4>
+    <ol>
+      ${gbbProfile.steps.map(s=>`<li>${s}</li>`).join('')}
+    </ol>
+    <h4>Reading and writing GBB flags</h4>
+
+# Write new flags (WP must be off first)
+futility gbb -s --flash --flags=0xa0b1
+
+# Verify after writing
+Enter recovery mode (Esc + Ref + Pwr) then press tab, at the bottom of debug info you should see GBB Flags set.
+    <h4>Combining flags</h4>
+    <p>Flags are combined with bitwise OR. For example: <code>0x8000 | 0x0008 | 0x0001 = 0x8009</code></p>
+    <a class="ext-link blue-link" href="https://docs.mrchromebox.tech/docs/firmware/wp/disabling.html" target="_blank">↗ Mr. Chromebox — Full WP Disable Guide</a>
+  `;
+}
+
+function buildDevModeBody(board, data, isLegacy, isKeyrolled) {
+  let specific = '';
+  if (isLegacy) {
+    specific = `<div class="success-box">✓ ${board.toUpperCase()} is a legacy H1 board. Dev mode is usually easy to enable with no FWMP interference. Just follow the standard steps below.</div>`;
+  } else if (isKeyrolled) {
+    specific = `<div class="warn-box">⚠ ${board.toUpperCase()} is keyrolled (kv${data.kv}). Enabling dev mode may be blocked by FWMP. You may need to run Sh1ttyOOBE/Sh1ttyExec first, or use Baddieapple to get a shell before enabling dev mode.</div>`;
+  } else {
+    specific = `<div class="success-box">✓ ${board.toUpperCase()} is a Cr50 board (kv${data.kv}). SH1MMER can disable the dev block and FWMP before you enable dev mode — recommended path.</div>`;
+  }
+  return `
+    <p>Developer mode removes ChromeOS restrictions, allows root shell access, and is required for most post-exploit setups. It also disables verified boot so you can run custom OS builds or Linux.</p>
+    ${specific}
+    <h4>Standard method (unkeyrolled or post-exploit)</h4>
+    <ol>
+      <li>Save any data — enabling dev mode wipes the device (powerwash)</li>
+      <li>Press <b>Esc + Refresh + Power</b> simultaneously to enter recovery mode</li>
+      <li>At the recovery screen, press <b>Ctrl + D</b></li>
+      <li>A screen will say "To turn OS verification OFF, press ENTER" — press <b>Enter</b></li>
+      <li>Device will reboot and show a scary-looking screen — wait ~30 seconds (or 2s if GBB flags are set)</li>
+      <li>Press <b>Ctrl + D</b> again to boot into dev mode. Device will wipe itself and reboot</li>
+      <li>Complete the setup wizard. You now have dev mode!</li>
+    </ol>
+    <h4>Verify you're in dev mode</h4>
+    <div class="code-block"># Open Crosh with Ctrl+Alt+T, then:
+shell
+# If you see a $ prompt, you're in dev mode. If not, you get a blocked message.</div>
+    <h4>Enable root shell (chronos)</h4>
+    <div class="code-block">sudo su
+# You now have root. Most exploit scripts need this.</div>
+    <h4>What changes in dev mode</h4>
+    <ul>
+      <li>Boot screen shows for 30 seconds (2s with GBB flag 0x0001)</li>
+      <li><code>Ctrl+Alt+T</code> in browser opens Crosh → type <code>shell</code> for bash</li>
+      <li>VT2 shell available: <code>Ctrl+Alt+F2</code> (login: <b>chronos</b>, no password by default)</li>
+      <li>USB booting and external kernel loading allowed</li>
+      <li>Sideloading Linux via Crostini or custom rootfs becomes possible</li>
+    </ul>
+    <div class="note-box">💡 Dev mode survives reboots but NOT a powerwash/factory reset. If you want dev mode permanent, set GBB flag <code>FORCE_DEV_SWITCH_ON (0x0008)</code> after disabling write-protect.</div>
+  `;
+}
+
+function toggleAccordion(header) {
+  const body = header.nextElementSibling;
+  const chev = header.querySelector('.chevron');
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+window.addEventListener('load', () => {
+  animatePage1();
+});
+</script>
+</body>
+</html>
